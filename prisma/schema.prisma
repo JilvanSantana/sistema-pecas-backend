@@ -1,0 +1,255 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model base {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresa_id     String           @db.Uuid
+  nome           String           @db.VarChar(150)
+  tipo           String           @default("filial") @db.VarChar(20)
+  estado         String           @db.Char(2)
+  cidade         String?          @db.VarChar(100)
+  endereco       String?
+  ativa          Boolean          @default(true)
+  empresa        empresa          @relation(fields: [empresa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  equipamento    equipamento[]
+  estoque_minimo estoque_minimo[]
+  peca           peca[]
+  tecnico        tecnico[]
+  usuario        usuario[]
+
+  @@index([empresa_id], map: "idx_base_empresa")
+}
+
+model contrato {
+  id                    String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresa_id            String         @db.Uuid
+  numero_contrato       String         @db.VarChar(100)
+  orgao_contratante     String         @db.VarChar(255)
+  sla_horas_atendimento Int
+  data_inicio           DateTime       @db.Date
+  data_fim              DateTime?      @db.Date
+  status                String         @default("ativo") @db.VarChar(20)
+  empresa               empresa        @relation(fields: [empresa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  equipamento           equipamento[]
+  movimentacao          movimentacao[]
+}
+
+model empresa {
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  razao_social      String           @db.VarChar(255)
+  cnpj              String           @unique @db.VarChar(18)
+  plano_id          String?          @db.Uuid
+  status_assinatura String           @default("trial") @db.VarChar(20)
+  criado_em         DateTime         @default(now()) @db.Timestamptz(6)
+  base              base[]
+  contrato          contrato[]
+  plano             plano?           @relation(fields: [plano_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  equipamento       equipamento[]
+  estoque_minimo    estoque_minimo[]
+  fornecedor        fornecedor[]
+  log_auditoria     log_auditoria[]
+  movimentacao      movimentacao[]
+  ordem_servico     ordem_servico[]
+  peca              peca[]
+  tecnico           tecnico[]
+  usuario           usuario[]
+}
+
+model equipamento {
+  id                     String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresa_id             String          @db.Uuid
+  tipo                   String          @db.VarChar(20)
+  numero_serie           String?         @db.VarChar(100)
+  modelo                 String?         @db.VarChar(100)
+  fabricante             String?         @db.VarChar(100)
+  localizacao_instalacao String
+  latitude               Decimal?        @db.Decimal(10, 7)
+  longitude              Decimal?        @db.Decimal(10, 7)
+  base_responsavel_id    String          @db.Uuid
+  contrato_id            String?         @db.Uuid
+  status_operacional     String          @default("ativo") @db.VarChar(30)
+  qr_code                String          @unique @db.VarChar(50)
+  criado_em              DateTime        @default(now()) @db.Timestamptz(6)
+  base                   base            @relation(fields: [base_responsavel_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  contrato               contrato?       @relation(fields: [contrato_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  empresa                empresa         @relation(fields: [empresa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  movimentacao           movimentacao[]
+  ordem_servico          ordem_servico[]
+  peca                   peca[]
+
+  @@index([empresa_id, status_operacional], map: "idx_equipamento_empresa")
+}
+
+model estoque_minimo {
+  id                String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresa_id        String  @db.Uuid
+  base_id           String  @db.Uuid
+  categoria_peca    String  @db.VarChar(100)
+  quantidade_minima Int     @default(0)
+  base              base    @relation(fields: [base_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  empresa           empresa @relation(fields: [empresa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([base_id, categoria_peca])
+}
+
+model log_auditoria {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresa_id       String   @db.Uuid
+  entidade         String   @db.VarChar(50)
+  entidade_id      String   @db.Uuid
+  acao             String   @db.VarChar(50)
+  usuario_id       String?  @db.Uuid
+  dados_anteriores Json?
+  dados_novos      Json?
+  timestamp        DateTime @default(now()) @db.Timestamptz(6)
+  empresa          empresa  @relation(fields: [empresa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuario          usuario? @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([empresa_id, entidade, entidade_id], map: "idx_log_auditoria_entidade")
+}
+
+model movimentacao {
+  id                                                   String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresa_id                                           String         @db.Uuid
+  peca_id                                              String         @db.Uuid
+  origem_tipo                                          String         @db.VarChar(20)
+  origem_id                                            String         @db.Uuid
+  destino_tipo                                         String         @db.VarChar(20)
+  destino_id                                           String         @db.Uuid
+  data_envio                                           DateTime       @default(now()) @db.Timestamptz(6)
+  codigo_rastreio                                      String?        @db.VarChar(100)
+  transportadora                                       String?        @db.VarChar(100)
+  status                                               String         @default("enviada") @db.VarChar(20)
+  motivo_envio                                         String         @db.VarChar(30)
+  descricao_problema                                   String?
+  equipamento_id                                       String?        @db.Uuid
+  contrato_id                                          String?        @db.Uuid
+  ordem_servico_id                                     String?        @db.Uuid
+  causou_parada                                        Boolean?       @default(false)
+  data_inicio_parada                                   DateTime?      @db.Timestamptz(6)
+  data_fim_parada                                      DateTime?      @db.Timestamptz(6)
+  registrado_offline                                   Boolean?       @default(false)
+  sincronizado_em                                      DateTime?      @db.Timestamptz(6)
+  latitude_registro                                    Decimal?       @db.Decimal(10, 7)
+  longitude_registro                                   Decimal?       @db.Decimal(10, 7)
+  data_confirmacao_recebimento                         DateTime?      @db.Timestamptz(6)
+  usuario_responsavel_id                               String?        @db.Uuid
+  usuario_confirmou_id                                 String?        @db.Uuid
+  tipo_aquisicao                                       String?        @db.VarChar(30)
+  numero_ordem_compra                                  String?        @db.VarChar(100)
+  previsao_retorno                                     DateTime?      @db.Date
+  observacao_envio                                     String?
+  contrato                                             contrato?      @relation(fields: [contrato_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  empresa                                              empresa        @relation(fields: [empresa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  equipamento                                          equipamento?   @relation(fields: [equipamento_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  ordem_servico                                        ordem_servico? @relation(fields: [ordem_servico_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  peca                                                 peca           @relation(fields: [peca_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuario_movimentacao_usuario_confirmou_idTousuario   usuario?       @relation("movimentacao_usuario_confirmou_idTousuario", fields: [usuario_confirmou_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuario_movimentacao_usuario_responsavel_idTousuario usuario?       @relation("movimentacao_usuario_responsavel_idTousuario", fields: [usuario_responsavel_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([contrato_id], map: "idx_movimentacao_contrato")
+  @@index([empresa_id, status], map: "idx_movimentacao_empresa_status")
+  @@index([equipamento_id], map: "idx_movimentacao_equipamento")
+  @@index([peca_id], map: "idx_movimentacao_peca")
+}
+
+model ordem_servico {
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresa_id     String         @db.Uuid
+  equipamento_id String         @db.Uuid
+  tecnico_id     String?        @db.Uuid
+  tipo           String         @db.VarChar(20)
+  status         String         @default("aberta") @db.VarChar(20)
+  data_abertura  DateTime       @default(now()) @db.Timestamptz(6)
+  data_conclusao DateTime?      @db.Timestamptz(6)
+  movimentacao   movimentacao[]
+  empresa        empresa        @relation(fields: [empresa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  equipamento    equipamento    @relation(fields: [equipamento_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tecnico        tecnico?       @relation(fields: [tecnico_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model peca {
+  id                   String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresa_id           String         @db.Uuid
+  codigo_qr            String         @unique @db.VarChar(50)
+  descricao            String         @db.VarChar(255)
+  categoria            String         @db.VarChar(100)
+  status_atual         String         @default("em_estoque_base") @db.VarChar(30)
+  base_atual_id        String?        @db.Uuid
+  tecnico_atual_id     String?        @db.Uuid
+  equipamento_atual_id String?        @db.Uuid
+  criado_em            DateTime       @default(now()) @db.Timestamptz(6)
+  movimentacao         movimentacao[]
+  base                 base?          @relation(fields: [base_atual_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  empresa              empresa        @relation(fields: [empresa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  equipamento          equipamento?   @relation(fields: [equipamento_atual_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tecnico              tecnico?       @relation(fields: [tecnico_atual_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([empresa_id], map: "idx_peca_empresa")
+}
+
+model plano {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome            String    @db.VarChar(50)
+  limite_bases    Int?
+  limite_pecas    Int?
+  limite_usuarios Int?
+  preco_mensal    Decimal?  @db.Decimal(10, 2)
+  empresa         empresa[]
+}
+
+model tecnico {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresa_id        String          @db.Uuid
+  usuario_id        String          @db.Uuid
+  base_vinculada_id String          @db.Uuid
+  veiculo           String?         @db.VarChar(100)
+  ativo             Boolean         @default(true)
+  ordem_servico     ordem_servico[]
+  peca              peca[]
+  base              base            @relation(fields: [base_vinculada_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  empresa           empresa         @relation(fields: [empresa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuario           usuario         @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model usuario {
+  id                                                        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresa_id                                                String          @db.Uuid
+  nome                                                      String          @db.VarChar(150)
+  email                                                     String          @db.VarChar(255)
+  senha_hash                                                String?         @db.VarChar(255)
+  papel                                                     String          @db.VarChar(20)
+  base_id                                                   String?         @db.Uuid
+  ativo                                                     Boolean         @default(true)
+  criado_em                                                 DateTime        @default(now()) @db.Timestamptz(6)
+  log_auditoria                                             log_auditoria[]
+  movimentacao_movimentacao_usuario_confirmou_idTousuario   movimentacao[]  @relation("movimentacao_usuario_confirmou_idTousuario")
+  movimentacao_movimentacao_usuario_responsavel_idTousuario movimentacao[]  @relation("movimentacao_usuario_responsavel_idTousuario")
+  tecnico                                                   tecnico[]
+  base                                                      base?           @relation(fields: [base_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_usuario_base")
+  empresa                                                   empresa         @relation(fields: [empresa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([empresa_id, email])
+  @@index([empresa_id], map: "idx_usuario_empresa")
+}
+
+model fornecedor {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresa_id  String  @db.Uuid
+  nome        String  @db.VarChar(255)
+  cnpj        String? @db.VarChar(18)
+  tipo        String  @db.VarChar(20)
+  contato     String? @db.VarChar(150)
+  email       String? @db.VarChar(255)
+  telefone    String? @db.VarChar(20)
+  observacoes String?
+  ativo       Boolean @default(true)
+  empresa     empresa @relation(fields: [empresa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
