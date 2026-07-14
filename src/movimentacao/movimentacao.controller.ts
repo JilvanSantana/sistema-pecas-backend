@@ -12,6 +12,11 @@ export class MovimentacaoController {
     return this.movimentacaoService.listarPendentes(req.user.empresa_id);
   }
 
+  @Get('aguardando-remessa')
+  listarAguardandoRemessa(@Request() req) {
+    return this.movimentacaoService.listarAguardandoRemessa(req.user.empresa_id);
+  }
+
   @Get()
   listar(
     @Request() req,
@@ -42,6 +47,7 @@ export class MovimentacaoController {
       registrado_offline?: boolean;
       latitude_registro?: number;
       longitude_registro?: number;
+      peca_defeituosa_id?: string;
     },
     @Request() req,
   ) {
@@ -64,6 +70,23 @@ export class MovimentacaoController {
   ) {
     return this.movimentacaoService.confirmarRecebimento(
       id,
+      req.user.empresa_id,
+      req.user.id,
+      body,
+    );
+  }
+
+  @Post('remessa-sede')
+  registrarRemessaParaSede(
+    @Body() body: {
+      peca_ids: string[];
+      base_destino_id: string;
+      codigo_rastreio?: string;
+      transportadora?: string;
+    },
+    @Request() req,
+  ) {
+    return this.movimentacaoService.registrarRemessaParaSede(
       req.user.empresa_id,
       req.user.id,
       body,
