@@ -65,12 +65,27 @@ export class MovimentacaoService {
       throw new BadRequestException('Peça não encontrada');
     }
 
+    // Se origem_tipo é tecnico, busca ou usa o usuario_id como origem_id
+    let origem_id = dados.origem_id;
+    if (dados.origem_tipo === 'tecnico') {
+      // Busca o tecnico pelo usuario_id
+      const tecnico = await this.prisma.tecnico.findFirst({
+        where: { usuario_id: dados.origem_id, empresa_id },
+      });
+      if (tecnico) {
+        origem_id = tecnico.id;
+      } else {
+        // Se não tem registro de técnico, usa o usuario_id mesmo
+        origem_id = dados.origem_id;
+      }
+    }
+
     const movimentacao = await this.prisma.movimentacao.create({
       data: {
         empresa_id,
         peca_id: dados.peca_id,
         origem_tipo: dados.origem_tipo,
-        origem_id: dados.origem_id,
+        origem_id: origem_id,
         destino_tipo: dados.destino_tipo,
         destino_id: dados.destino_id,
         motivo_envio: dados.motivo_envio,
