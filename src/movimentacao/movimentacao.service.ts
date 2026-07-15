@@ -5,7 +5,19 @@ import { PrismaService } from '../prisma/prisma.service';
 export class MovimentacaoService {
   constructor(private prisma: PrismaService) {}
 
-  async listar(empresa_id: string, filtros?: {
+  private filtroBase(papel: string, base_id: string | null) {
+    if (papel === 'admin_base' || papel === 'operador') {
+      return base_id ? {
+        OR: [
+          { origem_id: base_id, origem_tipo: 'base' },
+          { destino_id: base_id, destino_tipo: 'base' },
+        ]
+      } : {};
+    }
+    return {};
+  }
+
+  async listar(empresa_id: string, usuario: any, filtros?: {
     status?: string;
     peca_id?: string;
     equipamento_id?: string;
@@ -13,6 +25,7 @@ export class MovimentacaoService {
     return this.prisma.movimentacao.findMany({
       where: {
         empresa_id,
+        ...this.filtroBase(usuario.papel, usuario.base_id),
         ...(filtros?.status && { status: filtros.status }),
         ...(filtros?.peca_id && { peca_id: filtros.peca_id }),
         ...(filtros?.equipamento_id && { equipamento_id: filtros.equipamento_id }),
@@ -27,10 +40,11 @@ export class MovimentacaoService {
     });
   }
 
-  async listarPendentes(empresa_id: string) {
+  async listarPendentes(empresa_id: string, usuario: any) {
     return this.prisma.movimentacao.findMany({
       where: {
         empresa_id,
+        ...this.filtroBase(usuario.papel, usuario.base_id),
         status: { in: ['enviada', 'em_transito'] },
       },
       include: { peca: true, equipamento: true },
@@ -101,7 +115,6 @@ export class MovimentacaoService {
       },
     });
 
-    // Atualiza peça nova como instalada no equipamento
     await this.prisma.peca.update({
       where: { id: dados.peca_id },
       data: {
@@ -112,7 +125,6 @@ export class MovimentacaoService {
       },
     });
 
-    // Atualiza peça defeituosa como aguardando remessa com o técnico
     if (dados.peca_defeituosa_id) {
       await this.prisma.peca.update({
         where: { id: dados.peca_defeituosa_id },
@@ -174,10 +186,7 @@ export class MovimentacaoService {
 
   async listarAguardandoRemessa(empresa_id: string) {
     return this.prisma.peca.findMany({
-      where: {
-        empresa_id,
-        status_atual: 'aguardando_remessa',
-      },
+      where: { empresa_id, status_atual: 'aguardando_remessa' },
       include: {
         movimentacao: {
           orderBy: { data_envio: 'desc' },
@@ -223,10 +232,7 @@ export class MovimentacaoService {
 
       await this.prisma.peca.update({
         where: { id: peca_id },
-        data: {
-          status_atual: 'em_transito',
-          tecnico_atual_id: null,
-        },
+        data: { status_atual: 'em_transito', tecnico_atual_id: null },
       });
 
       movimentacoes.push(mov);

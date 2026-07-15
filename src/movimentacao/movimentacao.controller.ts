@@ -9,7 +9,7 @@ export class MovimentacaoController {
 
   @Get('pendentes')
   listarPendentes(@Request() req) {
-    return this.movimentacaoService.listarPendentes(req.user.empresa_id);
+    return this.movimentacaoService.listarPendentes(req.user.empresa_id, req.user);
   }
 
   @Get('aguardando-remessa')
@@ -24,7 +24,7 @@ export class MovimentacaoController {
     @Query('peca_id') peca_id?: string,
     @Query('equipamento_id') equipamento_id?: string,
   ) {
-    return this.movimentacaoService.listar(req.user.empresa_id, { status, peca_id, equipamento_id });
+    return this.movimentacaoService.listar(req.user.empresa_id, req.user, { status, peca_id, equipamento_id });
   }
 
   @Post()
