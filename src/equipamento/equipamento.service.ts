@@ -5,18 +5,23 @@ import { PrismaService } from '../prisma/prisma.service';
 export class EquipamentoService {
   constructor(private prisma: PrismaService) {}
 
-  async listar(empresa_id: string, filtros?: { tipo?: string; status?: string; base_id?: string }) {
+  private filtroBase(papel: string, base_id: string | null) {
+    if (papel === 'admin_base' || papel === 'operador') {
+      return base_id ? { base_responsavel_id: base_id } : {};
+    }
+    return {};
+  }
+
+  async listar(empresa_id: string, usuario: any, filtros?: { tipo?: string; status?: string; base_id?: string }) {
     return this.prisma.equipamento.findMany({
       where: {
         empresa_id,
+        ...this.filtroBase(usuario.papel, usuario.base_id),
         ...(filtros?.tipo && { tipo: filtros.tipo }),
         ...(filtros?.status && { status_operacional: filtros.status }),
         ...(filtros?.base_id && { base_responsavel_id: filtros.base_id }),
       },
-      include: {
-        base: true,
-        contrato: true,
-      },
+      include: { base: true, contrato: true },
       orderBy: { criado_em: 'desc' },
     });
   }
@@ -38,10 +43,7 @@ export class EquipamentoService {
   async buscarPorQr(qr_code: string, empresa_id: string) {
     return this.prisma.equipamento.findFirst({
       where: { qr_code, empresa_id },
-      include: {
-        base: true,
-        contrato: true,
-      },
+      include: { base: true, contrato: true },
     });
   }
 
@@ -57,7 +59,6 @@ export class EquipamentoService {
     contrato_id?: string;
   }) {
     const qr_code = `EQ-${dados.tipo.toUpperCase()}-${Date.now()}`;
-
     return this.prisma.equipamento.create({
       data: {
         empresa_id,
@@ -83,12 +84,12 @@ export class EquipamentoService {
     });
   }
 
-  async resumoPorStatus(empresa_id: string) {
-    const total = await this.prisma.equipamento.count({ where: { empresa_id } });
-    const ativos = await this.prisma.equipamento.count({ where: { empresa_id, status_operacional: 'ativo' } });
-    const parados = await this.prisma.equipamento.count({ where: { empresa_id, status_operacional: 'inativo_aguardando_peca' } });
-    const manutencao = await this.prisma.equipamento.count({ where: { empresa_id, status_operacional: 'em_manutencao' } });
-
+  async resumoPorStatus(empresa_id: string, usuario: any) {
+    const filtro = { empresa_id, ...this.filtroBase(usuario.papel, usuario.base_id) };
+    const total = await this.prisma.equipamento.count({ where: filtro });
+    const ativos = await this.prisma.equipamento.count({ where: { ...filtro, status_operacional: 'ativo' } });
+    const parados = await this.prisma.equipamento.count({ where: { ...filtro, status_operacional: 'inativo_aguardando_peca' } });
+    const manutencao = await this.prisma.equipamento.count({ where: { ...filtro, status_operacional: 'em_manutencao' } });
     return { total, ativos, parados, manutencao };
   }
 }

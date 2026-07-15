@@ -9,7 +9,7 @@ export class PecaController {
 
   @Get('resumo')
   resumo(@Request() req) {
-    return this.pecaService.resumoEstoque(req.user.empresa_id);
+    return this.pecaService.resumoEstoque(req.user.empresa_id, req.user);
   }
 
   @Get()
@@ -19,7 +19,7 @@ export class PecaController {
     @Query('status') status?: string,
     @Query('base_id') base_id?: string,
   ) {
-    return this.pecaService.listar(req.user.empresa_id, { categoria, status, base_id });
+    return this.pecaService.listar(req.user.empresa_id, req.user, { categoria, status, base_id });
   }
 
   @Get('qr/:codigo')

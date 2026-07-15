@@ -5,7 +5,14 @@ import { PrismaService } from '../prisma/prisma.service';
 export class PecaService {
   constructor(private prisma: PrismaService) {}
 
-  async listar(empresa_id: string, filtros?: {
+  private filtroBase(papel: string, base_id: string | null) {
+    if (papel === 'admin_base' || papel === 'operador') {
+      return base_id ? { base_atual_id: base_id } : {};
+    }
+    return {};
+  }
+
+  async listar(empresa_id: string, usuario: any, filtros?: {
     categoria?: string;
     status?: string;
     base_id?: string;
@@ -13,15 +20,12 @@ export class PecaService {
     return this.prisma.peca.findMany({
       where: {
         empresa_id,
+        ...this.filtroBase(usuario.papel, usuario.base_id),
         ...(filtros?.categoria && { categoria: filtros.categoria }),
         ...(filtros?.status && { status_atual: filtros.status }),
         ...(filtros?.base_id && { base_atual_id: filtros.base_id }),
       },
-      include: {
-        base: true,
-        tecnico: true,
-        equipamento: true,
-      },
+      include: { base: true, tecnico: true, equipamento: true },
       orderBy: { criado_em: 'desc' },
     });
   }
@@ -47,7 +51,6 @@ export class PecaService {
     base_atual_id: string;
   }) {
     const codigo_qr = `PC-${dados.categoria.toUpperCase().replace(/\s/g, '_')}-${Date.now()}`;
-
     return this.prisma.peca.create({
       data: {
         empresa_id,
@@ -73,7 +76,6 @@ export class PecaService {
       status_atual: 'em_estoque_base',
       base_atual_id: p.base_atual_id,
     }));
-
     return this.prisma.peca.createMany({ data: dados });
   }
 
@@ -91,7 +93,6 @@ export class PecaService {
         equipamento_atual_id: null,
       },
     });
-
     return { mensagem: 'Peça enviada ao fabricante para reparo' };
   }
 
@@ -100,15 +101,9 @@ export class PecaService {
     condicao: string;
   }) {
     let status_peca = 'em_estoque_base';
-
-    if (dados.condicao === 'nova') {
-      status_peca = 'em_estoque_base';
-    } else if (dados.condicao === 'reparada') {
-      status_peca = 'em_estoque_base';
-    } else if (dados.condicao === 'irreparavel') {
+    if (dados.condicao === 'irreparavel') {
       status_peca = 'descartada';
     }
-
     await this.prisma.peca.updateMany({
       where: { id, empresa_id },
       data: {
@@ -116,19 +111,18 @@ export class PecaService {
         base_atual_id: dados.condicao !== 'irreparavel' ? dados.base_destino_id : null,
       },
     });
-
     return { mensagem: 'Retorno do fabricante registrado com sucesso' };
   }
 
-  async resumoEstoque(empresa_id: string) {
-    const total = await this.prisma.peca.count({ where: { empresa_id } });
-    const em_estoque = await this.prisma.peca.count({ where: { empresa_id, status_atual: 'em_estoque_base' } });
-    const em_transito = await this.prisma.peca.count({ where: { empresa_id, status_atual: 'em_transito' } });
-    const instaladas = await this.prisma.peca.count({ where: { empresa_id, status_atual: 'instalada_equipamento' } });
-    const nao_localizadas = await this.prisma.peca.count({ where: { empresa_id, status_atual: 'nao_localizada' } });
-    const defeituosas = await this.prisma.peca.count({ where: { empresa_id, status_atual: 'defeituosa_aguardando_analise' } });
-    const em_reparo = await this.prisma.peca.count({ where: { empresa_id, status_atual: 'em_reparo_fabricante' } });
-
+  async resumoEstoque(empresa_id: string, usuario: any) {
+    const filtro = { empresa_id, ...this.filtroBase(usuario.papel, usuario.base_id) };
+    const total = await this.prisma.peca.count({ where: filtro });
+    const em_estoque = await this.prisma.peca.count({ where: { ...filtro, status_atual: 'em_estoque_base' } });
+    const em_transito = await this.prisma.peca.count({ where: { ...filtro, status_atual: 'em_transito' } });
+    const instaladas = await this.prisma.peca.count({ where: { ...filtro, status_atual: 'instalada_equipamento' } });
+    const nao_localizadas = await this.prisma.peca.count({ where: { ...filtro, status_atual: 'nao_localizada' } });
+    const defeituosas = await this.prisma.peca.count({ where: { ...filtro, status_atual: 'defeituosa_aguardando_analise' } });
+    const em_reparo = await this.prisma.peca.count({ where: { ...filtro, status_atual: 'em_reparo_fabricante' } });
     return { total, em_estoque, em_transito, instaladas, nao_localizadas, defeituosas, em_reparo };
   }
 }
