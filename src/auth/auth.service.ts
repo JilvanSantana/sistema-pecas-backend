@@ -29,6 +29,7 @@ export class AuthService {
       email: usuario.email,
       papel: usuario.papel,
       empresa_id: usuario.empresa_id,
+      base_id: usuario.base_id,
     };
 
     return {
@@ -39,6 +40,7 @@ export class AuthService {
         email: usuario.email,
         papel: usuario.papel,
         empresa_id: usuario.empresa_id,
+        base_id: usuario.base_id,
       },
     };
   }
