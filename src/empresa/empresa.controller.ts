@@ -1,58 +1,54 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
-import { EquipamentoService } from './equipamento.service';
+import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
+import { EmpresaService } from './empresa.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard)
-@Controller('equipamento')
-export class EquipamentoController {
-  constructor(private equipamentoService: EquipamentoService) {}
-
-  @Get('resumo')
-  resumo(@Request() req) {
-    return this.equipamentoService.resumoPorStatus(req.user.empresa_id, req.user);
-  }
-
-  @Get('qr/:codigo')
-  buscarPorQr(@Param('codigo') codigo: string, @Request() req) {
-    return this.equipamentoService.buscarPorQr(codigo, req.user.empresa_id);
-  }
+@Controller('empresa')
+export class EmpresaController {
+  constructor(private empresaService: EmpresaService) {}
 
   @Get()
-  listar(
-    @Request() req,
-    @Query('tipo') tipo?: string,
-    @Query('status') status?: string,
-    @Query('base_id') base_id?: string,
-  ) {
-    return this.equipamentoService.listar(req.user.empresa_id, req.user, { tipo, status, base_id });
+  listarEmpresas() {
+    return this.empresaService.listarEmpresas();
   }
 
   @Get(':id')
-  buscar(@Param('id') id: string, @Request() req) {
-    return this.equipamentoService.buscar(id, req.user.empresa_id);
+  buscarEmpresa(@Param('id') id: string) {
+    return this.empresaService.buscarEmpresa(id);
   }
 
   @Post()
-  criar(@Body() body: {
-    tipo: string;
-    numero_serie?: string;
-    modelo?: string;
-    fabricante?: string;
-    localizacao_instalacao: string;
-    latitude?: number;
-    longitude?: number;
-    base_responsavel_id: string;
-    contrato_id?: string;
-  }, @Request() req) {
-    return this.equipamentoService.criar(req.user.empresa_id, body);
+  criarEmpresa(
+    @Body() body: {
+      razao_social: string;
+      cnpj: string;
+      plano_id?: string;
+    },
+  ) {
+    return this.empresaService.criarEmpresa(body);
   }
 
-  @Patch(':id/status')
-  atualizarStatus(
-    @Param('id') id: string,
-    @Body() body: { status: string },
-    @Request() req,
+  @Get(':id/bases')
+  listarBases(@Param('id') id: string) {
+    return this.empresaService.listarBases(id);
+  }
+
+  @Post(':id/bases')
+  criarBase(
+    @Param('id') empresa_id: string,
+    @Body() body: {
+      nome: string;
+      tipo: string;
+      estado: string;
+      cidade?: string;
+      endereco?: string;
+    },
   ) {
-    return this.equipamentoService.atualizarStatus(id, req.user.empresa_id, body.status);
+    return this.empresaService.criarBase({ ...body, empresa_id });
+  }
+
+  @Get(':id/usuarios')
+  listarUsuarios(@Param('id') id: string) {
+    return this.empresaService.listarUsuarios(id);
   }
 }

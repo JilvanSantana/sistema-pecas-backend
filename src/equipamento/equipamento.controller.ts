@@ -9,7 +9,7 @@ export class EquipamentoController {
 
   @Get('resumo')
   resumo(@Request() req) {
-    return this.equipamentoService.resumoPorStatus(req.user.empresa_id);
+    return this.equipamentoService.resumoPorStatus(req.user.empresa_id, req.user);
   }
 
   @Get('qr/:codigo')
@@ -24,7 +24,7 @@ export class EquipamentoController {
     @Query('status') status?: string,
     @Query('base_id') base_id?: string,
   ) {
-    return this.equipamentoService.listar(req.user.empresa_id, { tipo, status, base_id });
+    return this.equipamentoService.listar(req.user.empresa_id, req.user, { tipo, status, base_id });
   }
 
   @Get(':id')

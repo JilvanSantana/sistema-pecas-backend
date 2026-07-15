@@ -204,7 +204,7 @@ export class MovimentacaoService {
     codigo_rastreio?: string;
     transportadora?: string;
   }) {
-    const movimentacoes = [];
+    const movimentacoes: any[] = [];
 
     for (const peca_id of dados.peca_ids) {
       const peca = await this.prisma.peca.findFirst({
