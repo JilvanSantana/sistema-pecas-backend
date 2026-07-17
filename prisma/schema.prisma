@@ -7,6 +7,26 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model afericao {
+  id                    String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresa_id            String      @db.Uuid
+  equipamento_id        String      @db.Uuid
+  data_afericao         DateTime    @db.Date
+  data_validade         DateTime    @db.Date
+  orgao_responsavel     String      @db.VarChar(150)
+  numero_certificado    String?     @db.VarChar(100)
+  anexo_certificado_url String?
+  observacoes           String?
+  criado_por_id         String?     @db.Uuid
+  criado_em             DateTime    @default(now()) @db.Timestamptz(6)
+  empresa               empresa     @relation(fields: [empresa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  equipamento           equipamento @relation(fields: [equipamento_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuario               usuario?    @relation(fields: [criado_por_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([empresa_id], map: "idx_afericao_empresa")
+  @@index([equipamento_id], map: "idx_afericao_equipamento")
+}
+
 model base {
   id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   empresa_id     String           @db.Uuid
@@ -47,6 +67,7 @@ model empresa {
   plano_id          String?          @db.Uuid
   status_assinatura String           @default("trial") @db.VarChar(20)
   criado_em         DateTime         @default(now()) @db.Timestamptz(6)
+  afericao          afericao[]
   base              base[]
   contrato          contrato[]
   plano             plano?           @relation(fields: [plano_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -69,6 +90,7 @@ model equipamento {
   modelo                 String?         @db.VarChar(100)
   fabricante             String?         @db.VarChar(100)
   localizacao_instalacao String
+  quantidade_faixas      Int?
   latitude               Decimal?        @db.Decimal(10, 7)
   longitude              Decimal?        @db.Decimal(10, 7)
   base_responsavel_id    String          @db.Uuid
@@ -76,6 +98,7 @@ model equipamento {
   status_operacional     String          @default("ativo") @db.VarChar(30)
   qr_code                String          @unique @db.VarChar(50)
   criado_em              DateTime        @default(now()) @db.Timestamptz(6)
+  afericao               afericao[]
   base                   base            @relation(fields: [base_responsavel_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   contrato               contrato?       @relation(fields: [contrato_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   empresa                empresa         @relation(fields: [empresa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -229,6 +252,7 @@ model usuario {
   base_id                                                   String?         @db.Uuid
   ativo                                                     Boolean         @default(true)
   criado_em                                                 DateTime        @default(now()) @db.Timestamptz(6)
+  afericao                                                  afericao[]
   log_auditoria                                             log_auditoria[]
   movimentacao_movimentacao_usuario_confirmou_idTousuario   movimentacao[]  @relation("movimentacao_usuario_confirmou_idTousuario")
   movimentacao_movimentacao_usuario_responsavel_idTousuario movimentacao[]  @relation("movimentacao_usuario_responsavel_idTousuario")

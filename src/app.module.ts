@@ -9,6 +9,7 @@ import { PecaModule } from './peca/peca.module';
 import { MovimentacaoModule } from './movimentacao/movimentacao.module';
 import { FornecedorModule } from './fornecedor/fornecedor.module';
 import { OrdemServicoModule } from './ordem-servico/ordem-servico.module';
+import { AfericaoModule } from './afericao/afericao.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { OrdemServicoModule } from './ordem-servico/ordem-servico.module';
     MovimentacaoModule,
     FornecedorModule,
     OrdemServicoModule,
+    AfericaoModule,
   ],
   controllers: [AppController],
   providers: [AppService],

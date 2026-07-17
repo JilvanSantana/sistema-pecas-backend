@@ -39,6 +39,7 @@ export class EquipamentoController {
     modelo?: string;
     fabricante?: string;
     localizacao_instalacao: string;
+    quantidade_faixas?: number;
     latitude?: number;
     longitude?: number;
     base_responsavel_id: string;

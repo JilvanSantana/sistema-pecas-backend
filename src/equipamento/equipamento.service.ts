@@ -53,6 +53,7 @@ export class EquipamentoService {
     modelo?: string;
     fabricante?: string;
     localizacao_instalacao: string;
+    quantidade_faixas?: number;
     latitude?: number;
     longitude?: number;
     base_responsavel_id: string;
@@ -67,6 +68,7 @@ export class EquipamentoService {
         modelo: dados.modelo || null,
         fabricante: dados.fabricante || null,
         localizacao_instalacao: dados.localizacao_instalacao,
+        quantidade_faixas: dados.quantidade_faixas || null,
         latitude: dados.latitude || null,
         longitude: dados.longitude || null,
         base_responsavel_id: dados.base_responsavel_id,
