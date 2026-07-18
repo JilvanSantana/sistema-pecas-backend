@@ -23,7 +23,7 @@ export class AfericaoService {
     });
   }
 
-  async listarVencendo(empresa_id: string, diasAntecedencia = 30) {
+  async listarVencendo(empresa_id: string, diasAntecedencia = 45) {
     const hoje = new Date();
     const limite = new Date();
     limite.setDate(hoje.getDate() + diasAntecedencia);

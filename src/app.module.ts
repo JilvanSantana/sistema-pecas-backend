@@ -10,6 +10,7 @@ import { MovimentacaoModule } from './movimentacao/movimentacao.module';
 import { FornecedorModule } from './fornecedor/fornecedor.module';
 import { OrdemServicoModule } from './ordem-servico/ordem-servico.module';
 import { AfericaoModule } from './afericao/afericao.module';
+import { ContratoModule } from './contrato/contrato.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AfericaoModule } from './afericao/afericao.module';
     FornecedorModule,
     OrdemServicoModule,
     AfericaoModule,
+    ContratoModule,
   ],
   controllers: [AppController],
   providers: [AppService],
