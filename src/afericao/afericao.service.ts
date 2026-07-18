@@ -12,14 +12,14 @@ export class AfericaoService {
         ...(equipamento_id ? { equipamento_id } : {}),
       },
       orderBy: { data_afericao: 'desc' },
-      include: { equipamento: true },
+      include: { equipamento: { include: { contrato: true } } },
     });
   }
 
   async buscar(id: string, empresa_id: string) {
     return this.prisma.afericao.findFirst({
       where: { id, empresa_id },
-      include: { equipamento: true },
+      include: { equipamento: { include: { contrato: true } } },
     });
   }
 
@@ -34,7 +34,7 @@ export class AfericaoService {
         data_validade: { lte: limite },
       },
       orderBy: { data_validade: 'asc' },
-      include: { equipamento: true },
+      include: { equipamento: { include: { contrato: true } } },
     });
   }
 
