@@ -13,10 +13,15 @@ export class AuthService {
   async login(email: string, senha: string) {
     const usuario = await this.prisma.usuario.findFirst({
       where: { email, ativo: true },
+      include: { empresa: true },
     });
 
     if (!usuario || !usuario.senha_hash) {
       throw new UnauthorizedException('Email ou senha inválidos');
+    }
+
+    if (usuario.empresa.status_assinatura === 'bloqueada') {
+      throw new UnauthorizedException('Empresa bloqueada. Entre em contato com o suporte.');
     }
 
     const senhaValida = await bcrypt.compare(senha, usuario.senha_hash);
