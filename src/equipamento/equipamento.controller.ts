@@ -56,4 +56,9 @@ export class EquipamentoController {
   ) {
     return this.equipamentoService.atualizarStatus(id, req.user.empresa_id, body.status);
   }
+
+  @Patch(':id/arquivar')
+  arquivar(@Param('id') id: string, @Request() req) {
+    return this.equipamentoService.arquivar(id, req.user.empresa_id);
+  }
 }

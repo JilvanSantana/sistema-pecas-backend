@@ -16,6 +16,7 @@ export class EquipamentoService {
     return this.prisma.equipamento.findMany({
       where: {
         empresa_id,
+        arquivado: false,
         ...this.filtroBase(usuario.papel, usuario.base_id),
         ...(filtros?.tipo && { tipo: filtros.tipo }),
         ...(filtros?.status && { status_operacional: filtros.status }),
@@ -42,7 +43,7 @@ export class EquipamentoService {
 
   async buscarPorQr(qr_code: string, empresa_id: string) {
     return this.prisma.equipamento.findFirst({
-      where: { qr_code, empresa_id },
+      where: { qr_code, empresa_id, arquivado: false },
       include: { base: true, contrato: true },
     });
   }
@@ -86,8 +87,16 @@ export class EquipamentoService {
     });
   }
 
+  async arquivar(id: string, empresa_id: string) {
+    await this.prisma.equipamento.updateMany({
+      where: { id, empresa_id },
+      data: { arquivado: true },
+    });
+    return { mensagem: 'Equipamento arquivado. O histórico foi preservado.' };
+  }
+
   async resumoPorStatus(empresa_id: string, usuario: any) {
-    const filtro = { empresa_id, ...this.filtroBase(usuario.papel, usuario.base_id) };
+    const filtro = { empresa_id, arquivado: false, ...this.filtroBase(usuario.papel, usuario.base_id) };
     const total = await this.prisma.equipamento.count({ where: filtro });
     const ativos = await this.prisma.equipamento.count({ where: { ...filtro, status_operacional: 'ativo' } });
     const parados = await this.prisma.equipamento.count({ where: { ...filtro, status_operacional: 'inativo_aguardando_peca' } });

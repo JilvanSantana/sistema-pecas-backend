@@ -17,6 +17,11 @@ export class MovimentacaoController {
     return this.movimentacaoService.listarAguardandoRemessa(req.user.empresa_id);
   }
 
+  @Get('peca-qr/:codigo')
+  buscarPecaPorQr(@Param('codigo') codigo: string, @Request() req) {
+    return this.movimentacaoService.buscarPecaPorQr(codigo, req.user.empresa_id);
+  }
+
   @Get()
   listar(
     @Request() req,

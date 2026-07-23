@@ -80,15 +80,19 @@ export class MovimentacaoService {
       throw new BadRequestException('Peça não encontrada');
     }
 
-    let origem_id = dados.origem_id;
+    // Descobre se quem está registrando é um técnico cadastrado.
+    // Se não for (ex: admin testando pelo app), tecnico_id fica null.
+    let tecnico_id: string | null = null;
     if (dados.origem_tipo === 'tecnico') {
       const tecnico = await this.prisma.tecnico.findFirst({
         where: { usuario_id: dados.origem_id, empresa_id },
       });
       if (tecnico) {
-        origem_id = tecnico.id;
+        tecnico_id = tecnico.id;
       }
     }
+
+    const origem_id = tecnico_id || dados.origem_id;
 
     const movimentacao = await this.prisma.movimentacao.create({
       data: {
@@ -132,7 +136,7 @@ export class MovimentacaoService {
           status_atual: 'aguardando_remessa',
           equipamento_atual_id: null,
           base_atual_id: null,
-          tecnico_atual_id: origem_id,
+          tecnico_atual_id: tecnico_id,
         },
       });
     }
@@ -239,5 +243,52 @@ export class MovimentacaoService {
     }
 
     return { mensagem: `${movimentacoes.length} peça(s) registrada(s) para remessa`, movimentacoes };
+  }
+
+  async buscarPecaPorQr(codigo_qr: string, empresa_id: string) {
+    const peca = await this.prisma.peca.findFirst({
+      where: { codigo_qr, empresa_id },
+      include: { base: true, tecnico: { include: { usuario: true } } },
+    });
+
+    if (!peca) {
+      throw new BadRequestException('Peça não encontrada');
+    }
+
+    // Peça está com o técnico, aguardando ser enviada para a sede
+    if (peca.status_atual === 'aguardando_remessa') {
+      return {
+        peca,
+        acao: 'remessa',
+        titulo: 'Registrar envio para a sede',
+        movimentacao_id: null,
+      };
+    }
+
+    // Peça está a caminho — precisa confirmar o recebimento
+    if (peca.status_atual === 'em_transito') {
+      const movimentacao = await this.prisma.movimentacao.findFirst({
+        where: {
+          peca_id: peca.id,
+          empresa_id,
+          status: { in: ['enviada', 'em_transito'] },
+        },
+        orderBy: { data_envio: 'desc' },
+      });
+
+      return {
+        peca,
+        acao: movimentacao ? 'confirmar' : 'nenhuma',
+        titulo: movimentacao ? 'Confirmar recebimento' : 'Nenhuma ação pendente',
+        movimentacao_id: movimentacao?.id || null,
+      };
+    }
+
+    return {
+      peca,
+      acao: 'nenhuma',
+      titulo: 'Nenhuma ação pendente para esta peça',
+      movimentacao_id: null,
+    };
   }
 }

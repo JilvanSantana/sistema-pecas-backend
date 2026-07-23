@@ -91,6 +91,7 @@ model equipamento {
   fabricante             String?         @db.VarChar(100)
   localizacao_instalacao String
   quantidade_faixas      Int?
+  arquivado              Boolean         @default(false)
   latitude               Decimal?        @db.Decimal(10, 7)
   longitude              Decimal?        @db.Decimal(10, 7)
   base_responsavel_id    String          @db.Uuid
