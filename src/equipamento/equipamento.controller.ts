@@ -23,8 +23,14 @@ export class EquipamentoController {
     @Query('tipo') tipo?: string,
     @Query('status') status?: string,
     @Query('base_id') base_id?: string,
+    @Query('incluir_arquivados') incluir_arquivados?: string,
   ) {
-    return this.equipamentoService.listar(req.user.empresa_id, req.user, { tipo, status, base_id });
+    return this.equipamentoService.listar(req.user.empresa_id, req.user, {
+      tipo,
+      status,
+      base_id,
+      incluir_arquivados: incluir_arquivados === 'true',
+    });
   }
 
   @Get(':id')
@@ -60,5 +66,10 @@ export class EquipamentoController {
   @Patch(':id/arquivar')
   arquivar(@Param('id') id: string, @Request() req) {
     return this.equipamentoService.arquivar(id, req.user.empresa_id);
+  }
+
+  @Patch(':id/desarquivar')
+  desarquivar(@Param('id') id: string, @Request() req) {
+    return this.equipamentoService.desarquivar(id, req.user.empresa_id);
   }
 }

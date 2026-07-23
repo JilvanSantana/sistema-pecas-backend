@@ -12,11 +12,16 @@ export class EquipamentoService {
     return {};
   }
 
-  async listar(empresa_id: string, usuario: any, filtros?: { tipo?: string; status?: string; base_id?: string }) {
+  async listar(empresa_id: string, usuario: any, filtros?: {
+    tipo?: string;
+    status?: string;
+    base_id?: string;
+    incluir_arquivados?: boolean;
+  }) {
     return this.prisma.equipamento.findMany({
       where: {
         empresa_id,
-        arquivado: false,
+        ...(filtros?.incluir_arquivados ? {} : { arquivado: false }),
         ...this.filtroBase(usuario.papel, usuario.base_id),
         ...(filtros?.tipo && { tipo: filtros.tipo }),
         ...(filtros?.status && { status_operacional: filtros.status }),
@@ -93,6 +98,14 @@ export class EquipamentoService {
       data: { arquivado: true },
     });
     return { mensagem: 'Equipamento arquivado. O histórico foi preservado.' };
+  }
+
+  async desarquivar(id: string, empresa_id: string) {
+    await this.prisma.equipamento.updateMany({
+      where: { id, empresa_id },
+      data: { arquivado: false },
+    });
+    return { mensagem: 'Equipamento restaurado para a lista ativa.' };
   }
 
   async resumoPorStatus(empresa_id: string, usuario: any) {
