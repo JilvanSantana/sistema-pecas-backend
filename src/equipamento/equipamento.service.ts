@@ -21,7 +21,7 @@ export class EquipamentoService {
     return this.prisma.equipamento.findMany({
       where: {
         empresa_id,
-        ...(filtros?.incluir_arquivados ? {} : { arquivado: false }),
+        arquivado: filtros?.incluir_arquivados === true,
         ...this.filtroBase(usuario.papel, usuario.base_id),
         ...(filtros?.tipo && { tipo: filtros.tipo }),
         ...(filtros?.status && { status_operacional: filtros.status }),
