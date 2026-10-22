@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { EmpresaService } from './empresa.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -85,7 +85,10 @@ export class EmpresaController {
   }
 
   @Post('usuarios')
-  criarUsuario(@Body() body: { nome: string; email: string; senha: string; papel: string; base_id?: string }, @Request() req) {
+  criarUsuario(
+    @Body() body: { nome: string; email: string; senha: string; papel: string; base_id?: string },
+    @Request() req,
+  ) {
     return this.empresaService.criarUsuario(req.user.empresa_id, body);
   }
 
@@ -97,5 +100,10 @@ export class EmpresaController {
   @Patch('usuarios/:id/desbloquear')
   desbloquearUsuario(@Param('id') id: string, @Request() req) {
     return this.empresaService.desbloquearUsuario(id, req.user.empresa_id);
+  }
+
+  @Delete('usuarios/:id')
+  deletarUsuario(@Param('id') id: string, @Request() req) {
+    return this.empresaService.deletarUsuario(id, req.user.empresa_id);
   }
 }

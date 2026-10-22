@@ -177,7 +177,6 @@ export class EmpresaService {
       },
     });
 
-    // Se for técnico, cria registro na tabela tecnico automaticamente
     if (dados.papel === 'tecnico' && dados.base_id) {
       await this.prisma.tecnico.create({
         data: {
@@ -210,5 +209,17 @@ export class EmpresaService {
       data: { ativo: true },
     });
     return { mensagem: 'Usuário desbloqueado.' };
+  }
+
+  async deletarUsuario(id: string, empresa_id: string) {
+    await this.prisma.tecnico.deleteMany({
+      where: { usuario_id: id, empresa_id },
+    });
+
+    await this.prisma.usuario.deleteMany({
+      where: { id, empresa_id },
+    });
+
+    return { mensagem: 'Usuário excluído com sucesso.' };
   }
 }
