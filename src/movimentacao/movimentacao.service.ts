@@ -222,8 +222,8 @@ export class MovimentacaoService {
         data: {
           empresa_id,
           peca_id,
-          origem_tipo: 'tecnico',
-          origem_id: peca.tecnico_atual_id || usuario_id,
+          origem_tipo: 'base',
+          origem_id: usuario_id,
           destino_tipo: 'base',
           destino_id: dados.base_destino_id,
           motivo_envio: 'devolucao',
@@ -270,6 +270,15 @@ export class MovimentacaoService {
         peca,
         acao: 'remessa',
         titulo: 'Registrar envio para a sede',
+        movimentacao_id: null,
+      };
+    }
+
+    if (peca.status_atual === 'saiu_para_campo') {
+      return {
+        peca,
+        acao: 'tecnico_confirmar_recebimento_base',
+        titulo: 'Técnico: confirmar recebimento da base',
         movimentacao_id: null,
       };
     }
@@ -341,5 +350,115 @@ export class MovimentacaoService {
     });
 
     return { mensagem: 'Recebimento confirmado. Peça registrada na base.' };
+  }
+
+  async registrarSaidaParaTecnico(empresa_id: string, usuario_id: string, dados: {
+    peca_id: string;
+    tecnico_usuario_id: string;
+    observacao?: string;
+  }) {
+    const peca = await this.prisma.peca.findFirst({
+      where: { id: dados.peca_id, empresa_id, status_atual: 'em_estoque_base' },
+    });
+
+    if (!peca) {
+      throw new BadRequestException('Peça não encontrada ou não está em estoque');
+    }
+
+    const tecnico = await this.prisma.tecnico.findFirst({
+      where: { usuario_id: dados.tecnico_usuario_id, empresa_id },
+      include: { usuario: true },
+    });
+
+    if (!tecnico) {
+      throw new BadRequestException('Técnico não encontrado');
+    }
+
+    await this.prisma.peca.update({
+      where: { id: dados.peca_id },
+      data: {
+        status_atual: 'saiu_para_campo',
+        tecnico_atual_id: tecnico.id,
+        base_atual_id: null,
+      },
+    });
+
+    await this.prisma.movimentacao.create({
+      data: {
+        empresa_id,
+        peca_id: dados.peca_id,
+        origem_tipo: 'base',
+        origem_id: usuario_id,
+        destino_tipo: 'tecnico',
+        destino_id: tecnico.id,
+        motivo_envio: 'saida_para_campo',
+        descricao_problema: dados.observacao || null,
+        status: 'enviada',
+        usuario_responsavel_id: usuario_id,
+      },
+    });
+
+    return {
+      mensagem: `Peça registrada como saída para o técnico ${tecnico.usuario.nome}. Aguardando confirmação do técnico.`,
+      tecnico_nome: tecnico.usuario.nome,
+    };
+  }
+
+  async tecnicoConfirmaRecebimentoDaBase(peca_id: string, empresa_id: string, usuario_id: string) {
+    const peca = await this.prisma.peca.findFirst({
+      where: { id: peca_id, empresa_id, status_atual: 'saiu_para_campo' },
+    });
+
+    if (!peca) {
+      throw new BadRequestException('Peça não encontrada ou não está aguardando confirmação');
+    }
+
+    const tecnico = await this.prisma.tecnico.findFirst({
+      where: { usuario_id, empresa_id },
+    });
+
+    if (!tecnico || peca.tecnico_atual_id !== tecnico.id) {
+      throw new BadRequestException('Esta peça não foi enviada para você');
+    }
+
+    await this.prisma.peca.update({
+      where: { id: peca_id },
+      data: { status_atual: 'em_posse_tecnico' },
+    });
+
+    const mov = await this.prisma.movimentacao.findFirst({
+      where: { peca_id, empresa_id, motivo_envio: 'saida_para_campo', status: 'enviada' },
+      orderBy: { data_envio: 'desc' },
+    });
+
+    if (mov) {
+      await this.prisma.movimentacao.update({
+        where: { id: mov.id },
+        data: {
+          status: 'recebida',
+          data_confirmacao_recebimento: new Date(),
+          usuario_confirmou_id: usuario_id,
+        },
+      });
+    }
+
+    return { mensagem: 'Recebimento confirmado. Peça agora está em sua posse.' };
+  }
+
+  async listarPecasParaTecnico(empresa_id: string, usuario_id: string) {
+    const tecnico = await this.prisma.tecnico.findFirst({
+      where: { usuario_id, empresa_id },
+    });
+
+    if (!tecnico) return [];
+
+    return this.prisma.peca.findMany({
+      where: {
+        empresa_id,
+        tecnico_atual_id: tecnico.id,
+        status_atual: { in: ['saiu_para_campo', 'em_posse_tecnico', 'aguardando_remessa', 'tecnico_confirmou_entrega'] },
+      },
+      orderBy: { criado_em: 'desc' },
+    });
   }
 }

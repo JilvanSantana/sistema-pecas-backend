@@ -22,6 +22,11 @@ export class MovimentacaoController {
     return this.movimentacaoService.buscarPecaPorQr(codigo, req.user.empresa_id);
   }
 
+  @Get('minhas-pecas')
+  listarPecasParaTecnico(@Request() req) {
+    return this.movimentacaoService.listarPecasParaTecnico(req.user.empresa_id, req.user.id);
+  }
+
   @Get()
   listar(
     @Request() req,
@@ -56,54 +61,29 @@ export class MovimentacaoController {
     },
     @Request() req,
   ) {
-    return this.movimentacaoService.registrarEnvio(
-      req.user.empresa_id,
-      req.user.id,
-      body,
-    );
+    return this.movimentacaoService.registrarEnvio(req.user.empresa_id, req.user.id, body);
   }
 
   @Post(':id/confirmar')
   confirmarRecebimento(
     @Param('id') id: string,
-    @Body() body: {
-      confirmado: boolean;
-      condicao: string;
-      data_fim_parada?: string;
-    },
+    @Body() body: { confirmado: boolean; condicao: string; data_fim_parada?: string },
     @Request() req,
   ) {
-    return this.movimentacaoService.confirmarRecebimento(
-      id,
-      req.user.empresa_id,
-      req.user.id,
-      body,
-    );
+    return this.movimentacaoService.confirmarRecebimento(id, req.user.empresa_id, req.user.id, body);
   }
 
   @Post('remessa-sede')
   registrarRemessaParaSede(
-    @Body() body: {
-      peca_ids: string[];
-      base_destino_id: string;
-      codigo_rastreio?: string;
-      transportadora?: string;
-    },
+    @Body() body: { peca_ids: string[]; base_destino_id: string; codigo_rastreio?: string; transportadora?: string },
     @Request() req,
   ) {
-    return this.movimentacaoService.registrarRemessaParaSede(
-      req.user.empresa_id,
-      req.user.id,
-      body,
-    );
+    return this.movimentacaoService.registrarRemessaParaSede(req.user.empresa_id, req.user.id, body);
   }
 
   @Post('peca/:id/tecnico-confirma-entrega')
   tecnicoConfirmaEntrega(@Param('id') id: string, @Request() req) {
-    return this.movimentacaoService.tecnicoConfirmaEntrega(
-      id,
-      req.user.empresa_id,
-    );
+    return this.movimentacaoService.tecnicoConfirmaEntrega(id, req.user.empresa_id);
   }
 
   @Post('peca/:id/operador-confirma-recebimento')
@@ -112,11 +92,19 @@ export class MovimentacaoController {
     @Body() body: { tipo: string; descricao_defeito?: string },
     @Request() req,
   ) {
-    return this.movimentacaoService.operadorConfirmaRecebimento(
-      id,
-      req.user.empresa_id,
-      req.user.base_id,
-      body,
-    );
+    return this.movimentacaoService.operadorConfirmaRecebimento(id, req.user.empresa_id, req.user.base_id, body);
+  }
+
+  @Post('saida-para-tecnico')
+  registrarSaidaParaTecnico(
+    @Body() body: { peca_id: string; tecnico_usuario_id: string; observacao?: string },
+    @Request() req,
+  ) {
+    return this.movimentacaoService.registrarSaidaParaTecnico(req.user.empresa_id, req.user.id, body);
+  }
+
+  @Post('peca/:id/tecnico-confirma-recebimento-base')
+  tecnicoConfirmaRecebimentoDaBase(@Param('id') id: string, @Request() req) {
+    return this.movimentacaoService.tecnicoConfirmaRecebimentoDaBase(id, req.user.empresa_id, req.user.id);
   }
 }
