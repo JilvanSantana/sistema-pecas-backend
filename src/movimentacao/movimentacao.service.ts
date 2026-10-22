@@ -80,8 +80,6 @@ export class MovimentacaoService {
       throw new BadRequestException('Peça não encontrada');
     }
 
-    // Descobre se quem está registrando é um técnico cadastrado.
-    // Se não for (ex: admin testando pelo app), tecnico_id fica null.
     let tecnico_id: string | null = null;
     if (dados.origem_tipo === 'tecnico') {
       const tecnico = await this.prisma.tecnico.findFirst({
@@ -136,7 +134,7 @@ export class MovimentacaoService {
           status_atual: 'aguardando_remessa',
           equipamento_atual_id: null,
           base_atual_id: null,
-          tecnico_atual_id: tecnico_id,
+          tecnico_atual_id: origem_id,
         },
       });
     }
@@ -190,7 +188,10 @@ export class MovimentacaoService {
 
   async listarAguardandoRemessa(empresa_id: string) {
     return this.prisma.peca.findMany({
-      where: { empresa_id, status_atual: 'aguardando_remessa' },
+      where: {
+        empresa_id,
+        status_atual: { in: ['aguardando_remessa', 'tecnico_confirmou_entrega'] },
+      },
       include: {
         movimentacao: {
           orderBy: { data_envio: 'desc' },
@@ -255,8 +256,16 @@ export class MovimentacaoService {
       throw new BadRequestException('Peça não encontrada');
     }
 
-    // Peça está com o técnico, aguardando ser enviada para a sede
     if (peca.status_atual === 'aguardando_remessa') {
+      return {
+        peca,
+        acao: 'tecnico_confirmar_entrega',
+        titulo: 'Técnico: confirmar entrega ao operador',
+        movimentacao_id: null,
+      };
+    }
+
+    if (peca.status_atual === 'tecnico_confirmou_entrega') {
       return {
         peca,
         acao: 'remessa',
@@ -265,7 +274,6 @@ export class MovimentacaoService {
       };
     }
 
-    // Peça está a caminho — precisa confirmar o recebimento
     if (peca.status_atual === 'em_transito') {
       const movimentacao = await this.prisma.movimentacao.findFirst({
         where: {
@@ -290,5 +298,48 @@ export class MovimentacaoService {
       titulo: 'Nenhuma ação pendente para esta peça',
       movimentacao_id: null,
     };
+  }
+
+  async tecnicoConfirmaEntrega(peca_id: string, empresa_id: string) {
+    const peca = await this.prisma.peca.findFirst({
+      where: { id: peca_id, empresa_id, status_atual: 'aguardando_remessa' },
+    });
+
+    if (!peca) {
+      throw new BadRequestException('Peça não encontrada ou não está aguardando remessa');
+    }
+
+    await this.prisma.peca.update({
+      where: { id: peca_id },
+      data: { status_atual: 'tecnico_confirmou_entrega' },
+    });
+
+    return { mensagem: 'Entrega confirmada pelo técnico. Aguardando confirmação do operador.' };
+  }
+
+  async operadorConfirmaRecebimento(peca_id: string, empresa_id: string, base_id: string, dados: {
+    tipo: string;
+    descricao_defeito?: string;
+  }) {
+    const peca = await this.prisma.peca.findFirst({
+      where: { id: peca_id, empresa_id, status_atual: 'tecnico_confirmou_entrega' },
+    });
+
+    if (!peca) {
+      throw new BadRequestException('Peça não encontrada ou técnico ainda não confirmou a entrega');
+    }
+
+    const status_final = dados.tipo === 'defeituosa' ? 'defeituosa_aguardando_analise' : 'em_estoque_base';
+
+    await this.prisma.peca.update({
+      where: { id: peca_id },
+      data: {
+        status_atual: status_final,
+        base_atual_id: base_id,
+        tecnico_atual_id: null,
+      },
+    });
+
+    return { mensagem: 'Recebimento confirmado. Peça registrada na base.' };
   }
 }

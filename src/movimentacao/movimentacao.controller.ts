@@ -97,4 +97,26 @@ export class MovimentacaoController {
       body,
     );
   }
+
+  @Post('peca/:id/tecnico-confirma-entrega')
+  tecnicoConfirmaEntrega(@Param('id') id: string, @Request() req) {
+    return this.movimentacaoService.tecnicoConfirmaEntrega(
+      id,
+      req.user.empresa_id,
+    );
+  }
+
+  @Post('peca/:id/operador-confirma-recebimento')
+  operadorConfirmaRecebimento(
+    @Param('id') id: string,
+    @Body() body: { tipo: string; descricao_defeito?: string },
+    @Request() req,
+  ) {
+    return this.movimentacaoService.operadorConfirmaRecebimento(
+      id,
+      req.user.empresa_id,
+      req.user.base_id,
+      body,
+    );
+  }
 }
