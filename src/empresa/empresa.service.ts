@@ -97,7 +97,7 @@ export class EmpresaService {
       where: { id },
       data: { status_assinatura: 'bloqueada' },
     });
-    return { mensagem: 'Empresa bloqueada. Nenhum usuário conseguirá logar.' };
+    return { mensagem: 'Empresa bloqueada.' };
   }
 
   async desbloquearEmpresa(id: string) {
@@ -176,6 +176,17 @@ export class EmpresaService {
         base_id: dados.base_id || null,
       },
     });
+
+    // Se for técnico, cria registro na tabela tecnico automaticamente
+    if (dados.papel === 'tecnico' && dados.base_id) {
+      await this.prisma.tecnico.create({
+        data: {
+          usuario: { connect: { id: usuario.id } },
+          empresa: { connect: { id: empresa_id } },
+          base: { connect: { id: dados.base_id } },
+        },
+      });
+    }
 
     return {
       id: usuario.id,
