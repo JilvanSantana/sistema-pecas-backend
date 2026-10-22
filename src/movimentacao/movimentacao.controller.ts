@@ -107,4 +107,12 @@ export class MovimentacaoController {
   tecnicoConfirmaRecebimentoDaBase(@Param('id') id: string, @Request() req) {
     return this.movimentacaoService.tecnicoConfirmaRecebimentoDaBase(id, req.user.empresa_id, req.user.id);
   }
+
+  @Post('saida-sede-para-base')
+  registrarSaidaDaSedeParaBase(
+    @Body() body: { peca_id: string; base_destino_id: string; codigo_rastreio?: string; transportadora?: string; observacao?: string },
+    @Request() req,
+  ) {
+    return this.movimentacaoService.registrarSaidaDaSedeParaBase(req.user.empresa_id, req.user.id, body);
+  }
 }

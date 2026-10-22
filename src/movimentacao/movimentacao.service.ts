@@ -461,4 +461,44 @@ export class MovimentacaoService {
       orderBy: { criado_em: 'desc' },
     });
   }
+  
+    async registrarSaidaDaSedeParaBase(empresa_id: string, usuario_id: string, dados: {
+    peca_id: string;
+    base_destino_id: string;
+    codigo_rastreio?: string;
+    transportadora?: string;
+    observacao?: string;
+  }) {
+    const peca = await this.prisma.peca.findFirst({
+      where: { id: dados.peca_id, empresa_id, status_atual: 'em_estoque_base' },
+    });
+
+    if (!peca) {
+      throw new BadRequestException('Peça não encontrada ou não está em estoque');
+    }
+
+    await this.prisma.movimentacao.create({
+      data: {
+        empresa_id,
+        peca_id: dados.peca_id,
+        origem_tipo: 'base',
+        origem_id: usuario_id,
+        destino_tipo: 'base',
+        destino_id: dados.base_destino_id,
+        motivo_envio: 'envio_sede_para_base',
+        descricao_problema: dados.observacao || null,
+        codigo_rastreio: dados.codigo_rastreio || null,
+        transportadora: dados.transportadora || null,
+        status: 'enviada',
+        usuario_responsavel_id: usuario_id,
+      },
+    });
+
+    await this.prisma.peca.update({
+      where: { id: dados.peca_id },
+      data: { status_atual: 'em_transito', base_atual_id: null },
+    });
+
+    return { mensagem: 'Peça registrada como enviada para a base. Aguardando confirmação de recebimento.' };
+  }
 }
