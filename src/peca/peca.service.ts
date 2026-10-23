@@ -125,4 +125,59 @@ export class PecaService {
     const em_reparo = await this.prisma.peca.count({ where: { ...filtro, status_atual: 'em_reparo_fabricante' } });
     return { total, em_estoque, em_transito, instaladas, nao_localizadas, defeituosas, em_reparo };
   }
+
+  async historicoPeca(id: string, empresa_id: string) {
+    const peca = await this.prisma.peca.findFirst({
+      where: { id, empresa_id },
+      include: {
+        base: true,
+        tecnico: { include: { usuario: true } },
+        equipamento: true,
+      },
+    });
+
+    if (!peca) throw new Error('Peça não encontrada');
+
+    const movimentacoes = await this.prisma.movimentacao.findMany({
+      where: { peca_id: id, empresa_id },
+      include: { equipamento: true },
+      orderBy: { data_envio: 'asc' },
+    });
+
+    const totalManutencoes = movimentacoes.filter(m =>
+      m.motivo_envio === 'manutencao_corretiva' || m.motivo_envio === 'devolucao'
+    ).length;
+
+    const totalRetornos = movimentacoes.filter(m =>
+      m.motivo_envio === 'retorno_fabricante'
+    ).length;
+
+    let vidaUtil: 'saudavel' | 'atencao' | 'critica' = 'saudavel';
+    if (totalManutencoes >= 5) vidaUtil = 'critica';
+    else if (totalManutencoes >= 3) vidaUtil = 'atencao';
+
+    const diasDesdeCreacao = Math.floor(
+      (new Date().getTime() - new Date(peca.criado_em).getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    return {
+      peca,
+      historico: movimentacoes.map(m => ({
+        id: m.id,
+        data: m.data_envio,
+        motivo: m.motivo_envio,
+        descricao: m.descricao_problema,
+        equipamento: m.equipamento ? `${m.equipamento.tipo} - ${m.equipamento.modelo}` : null,
+        status: m.status,
+        causou_parada: m.causou_parada,
+      })),
+      estatisticas: {
+        total_movimentacoes: movimentacoes.length,
+        total_manutencoes: totalManutencoes,
+        total_retornos_fabricante: totalRetornos,
+        dias_em_uso: diasDesdeCreacao,
+        vida_util: vidaUtil,
+      },
+    };
+  }
 }

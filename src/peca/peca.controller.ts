@@ -27,6 +27,11 @@ export class PecaController {
     return this.pecaService.buscarPorQr(codigo, req.user.empresa_id);
   }
 
+  @Get(':id/historico')
+  historicoPeca(@Param('id') id: string, @Request() req) {
+    return this.pecaService.historicoPeca(id, req.user.empresa_id);
+  }
+
   @Post()
   criar(
     @Body() body: {
