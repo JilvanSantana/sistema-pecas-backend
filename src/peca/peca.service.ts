@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -93,7 +93,7 @@ export class PecaService {
         equipamento_atual_id: null,
       },
     });
-    return { mensagem: 'Peça enviada ao fabricante para reparo' };
+    return { mensagem: 'Peca enviada ao fabricante para reparo' };
   }
 
   async retornoFabricante(id: string, empresa_id: string, dados: {
@@ -136,7 +136,7 @@ export class PecaService {
       },
     });
 
-    if (!peca) throw new Error('Peça não encontrada');
+    if (!peca) throw new Error('Peca nao encontrada');
 
     const movimentacoes = await this.prisma.movimentacao.findMany({
       where: { peca_id: id, empresa_id },
@@ -179,5 +179,32 @@ export class PecaService {
         vida_util: vidaUtil,
       },
     };
+  }
+
+  async listarManutencao(empresa_id: string, usuario: any) {
+    const statusManutencao = ['em_reparo_fabricante', 'defeituosa_aguardando_analise'];
+
+    if (usuario.papel === 'admin_global' || !usuario.base_id) {
+      return this.prisma.peca.findMany({
+        where: { empresa_id, status_atual: { in: statusManutencao } },
+        include: { movimentacao: { orderBy: { data_envio: 'desc' }, take: 1 } },
+        orderBy: { criado_em: 'desc' },
+      });
+    }
+
+    const registros = await this.prisma.movimentacao.findMany({
+      where: { empresa_id, origem_tipo: 'base', origem_id: usuario.base_id },
+      select: { peca_id: true },
+      distinct: ['peca_id'],
+    });
+
+    const ids = registros.map((r) => r.peca_id);
+    if (ids.length === 0) return [];
+
+    return this.prisma.peca.findMany({
+      where: { empresa_id, id: { in: ids }, status_atual: { in: statusManutencao } },
+      include: { movimentacao: { orderBy: { data_envio: 'desc' }, take: 1 } },
+      orderBy: { criado_em: 'desc' },
+    });
   }
 }

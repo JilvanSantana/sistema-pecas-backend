@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+﻿import { Controller, Get, Post, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { PecaService } from './peca.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -10,6 +10,11 @@ export class PecaController {
   @Get('resumo')
   resumo(@Request() req) {
     return this.pecaService.resumoEstoque(req.user.empresa_id, req.user);
+  }
+
+  @Get('manutencao')
+  listarManutencao(@Request() req) {
+    return this.pecaService.listarManutencao(req.user.empresa_id, req.user);
   }
 
   @Get()
