@@ -108,6 +108,45 @@ export class EmpresaService {
     return { mensagem: 'Empresa desbloqueada.' };
   }
 
+  async deletarEmpresa(id: string) {
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Log de auditoria
+      await tx.logAuditoria.deleteMany({ where: { empresa_id: id } });
+
+      // 2. Ordens de serviço
+      await tx.ordemServico.deleteMany({ where: { empresa_id: id } });
+
+      // 3. Aferições
+      await tx.afericao.deleteMany({ where: { empresa_id: id } });
+
+      // 4. Contratos
+      await tx.contrato.deleteMany({ where: { empresa_id: id } });
+
+      // 5. Movimentações
+      await tx.movimentacao.deleteMany({ where: { empresa_id: id } });
+
+      // 6. Peças
+      await tx.peca.deleteMany({ where: { empresa_id: id } });
+
+      // 7. Equipamentos
+      await tx.equipamento.deleteMany({ where: { empresa_id: id } });
+
+      // 8. Técnicos
+      await tx.tecnico.deleteMany({ where: { empresa_id: id } });
+
+      // 9. Usuários
+      await tx.usuario.deleteMany({ where: { empresa_id: id } });
+
+      // 10. Bases
+      await tx.base.deleteMany({ where: { empresa_id: id } });
+
+      // 11. Empresa
+      await tx.empresa.delete({ where: { id } });
+    });
+
+    return { mensagem: 'Empresa excluída permanentemente.' };
+  }
+
   async listarBases(empresa_id: string) {
     return this.prisma.base.findMany({
       where: { empresa_id },

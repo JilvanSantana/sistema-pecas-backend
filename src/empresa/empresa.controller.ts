@@ -1,27 +1,30 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { EmpresaService } from './empresa.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('empresa')
 export class EmpresaController {
   constructor(private empresaService: EmpresaService) {}
 
+  // ─── SUPER ADMIN: listar todas as empresas ────────────────────────────────
+  @Roles('super_admin')
   @Get()
   listarEmpresas() {
     return this.empresaService.listarEmpresas();
   }
 
-  @Get('usuarios')
-  listarUsuariosDaEmpresa(@Request() req) {
-    return this.empresaService.listarUsuarios(req.user.empresa_id);
-  }
-
+  // ─── SUPER ADMIN: buscar empresa por id ──────────────────────────────────
+  @Roles('super_admin')
   @Get(':id')
   buscarEmpresa(@Param('id') id: string) {
     return this.empresaService.buscarEmpresa(id);
   }
 
+  // ─── SUPER ADMIN: criar empresa simples ──────────────────────────────────
+  @Roles('super_admin')
   @Post()
   criarEmpresa(
     @Body() body: {
@@ -33,6 +36,8 @@ export class EmpresaController {
     return this.empresaService.criarEmpresa(body);
   }
 
+  // ─── SUPER ADMIN: onboarding completo (empresa + admin + sede) ───────────
+  @Roles('super_admin')
   @Post('onboarding')
   criarEmpresaComAdmin(
     @Body() body: {
@@ -50,21 +55,35 @@ export class EmpresaController {
     return this.empresaService.criarEmpresaComAdmin(body);
   }
 
+  // ─── SUPER ADMIN: bloquear / desbloquear empresa ─────────────────────────
+  @Roles('super_admin')
   @Patch(':id/bloquear')
   bloquearEmpresa(@Param('id') id: string) {
     return this.empresaService.bloquearEmpresa(id);
   }
 
+  @Roles('super_admin')
   @Patch(':id/desbloquear')
   desbloquearEmpresa(@Param('id') id: string) {
     return this.empresaService.desbloquearEmpresa(id);
   }
 
+  // ─── SUPER ADMIN: excluir empresa ────────────────────────────────────────
+  @Roles('super_admin')
+  @Delete(':id')
+  deletarEmpresa(@Param('id') id: string) {
+    return this.empresaService.deletarEmpresa(id);
+  }
+
+  // ─── SUPER ADMIN: listar bases de uma empresa ────────────────────────────
+  @Roles('super_admin')
   @Get(':id/bases')
   listarBases(@Param('id') id: string) {
     return this.empresaService.listarBases(id);
   }
 
+  // ─── SUPER ADMIN: criar base em uma empresa ──────────────────────────────
+  @Roles('super_admin')
   @Post(':id/bases')
   criarBase(
     @Param('id') empresa_id: string,
@@ -79,11 +98,22 @@ export class EmpresaController {
     return this.empresaService.criarBase({ ...body, empresa_id });
   }
 
+  // ─── ADMIN GLOBAL: listar usuários da própria empresa ────────────────────
+  @Roles('super_admin', 'admin_global')
+  @Get('usuarios')
+  listarUsuariosDaEmpresa(@Request() req) {
+    return this.empresaService.listarUsuarios(req.user.empresa_id);
+  }
+
+  // ─── SUPER ADMIN: listar usuários de qualquer empresa ────────────────────
+  @Roles('super_admin')
   @Get(':id/usuarios')
   listarUsuarios(@Param('id') id: string) {
     return this.empresaService.listarUsuarios(id);
   }
 
+  // ─── ADMIN GLOBAL: criar usuário na própria empresa ──────────────────────
+  @Roles('super_admin', 'admin_global')
   @Post('usuarios')
   criarUsuario(
     @Body() body: { nome: string; email: string; senha: string; papel: string; base_id?: string },
@@ -92,16 +122,20 @@ export class EmpresaController {
     return this.empresaService.criarUsuario(req.user.empresa_id, body);
   }
 
+  // ─── ADMIN GLOBAL: bloquear / desbloquear / deletar usuário ──────────────
+  @Roles('super_admin', 'admin_global')
   @Patch('usuarios/:id/bloquear')
   bloquearUsuario(@Param('id') id: string, @Request() req) {
     return this.empresaService.bloquearUsuario(id, req.user.empresa_id);
   }
 
+  @Roles('super_admin', 'admin_global')
   @Patch('usuarios/:id/desbloquear')
   desbloquearUsuario(@Param('id') id: string, @Request() req) {
     return this.empresaService.desbloquearUsuario(id, req.user.empresa_id);
   }
 
+  @Roles('super_admin', 'admin_global')
   @Delete('usuarios/:id')
   deletarUsuario(@Param('id') id: string, @Request() req) {
     return this.empresaService.deletarUsuario(id, req.user.empresa_id);
