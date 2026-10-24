@@ -110,37 +110,16 @@ export class EmpresaService {
 
   async deletarEmpresa(id: string) {
     await this.prisma.$transaction(async (tx) => {
-      // 1. Log de auditoria
       await tx.logAuditoria.deleteMany({ where: { empresa_id: id } });
-
-      // 2. Ordens de serviço
       await tx.ordemServico.deleteMany({ where: { empresa_id: id } });
-
-      // 3. Aferições
       await tx.afericao.deleteMany({ where: { empresa_id: id } });
-
-      // 4. Contratos
       await tx.contrato.deleteMany({ where: { empresa_id: id } });
-
-      // 5. Movimentações
       await tx.movimentacao.deleteMany({ where: { empresa_id: id } });
-
-      // 6. Peças
       await tx.peca.deleteMany({ where: { empresa_id: id } });
-
-      // 7. Equipamentos
       await tx.equipamento.deleteMany({ where: { empresa_id: id } });
-
-      // 8. Técnicos
       await tx.tecnico.deleteMany({ where: { empresa_id: id } });
-
-      // 9. Usuários
       await tx.usuario.deleteMany({ where: { empresa_id: id } });
-
-      // 10. Bases
       await tx.base.deleteMany({ where: { empresa_id: id } });
-
-      // 11. Empresa
       await tx.empresa.delete({ where: { id } });
     });
 
@@ -175,7 +154,10 @@ export class EmpresaService {
 
   async listarUsuarios(empresa_id: string) {
     return this.prisma.usuario.findMany({
-      where: { empresa_id },
+      where: {
+        empresa_id,
+        papel: { not: 'super_admin' },
+      },
       select: {
         id: true,
         nome: true,
@@ -251,6 +233,14 @@ export class EmpresaService {
   }
 
   async deletarUsuario(id: string, empresa_id: string) {
+    const usuario = await this.prisma.usuario.findFirst({
+      where: { id, empresa_id },
+    });
+
+    if (!usuario || usuario.papel === 'super_admin') {
+      throw new BadRequestException('Não é possível excluir este usuário');
+    }
+
     await this.prisma.tecnico.deleteMany({
       where: { usuario_id: id, empresa_id },
     });
