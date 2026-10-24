@@ -110,8 +110,8 @@ export class EmpresaService {
 
   async deletarEmpresa(id: string) {
     await this.prisma.$transaction(async (tx) => {
-      await tx.logAuditoria.deleteMany({ where: { empresa_id: id } });
-      await tx.ordemServico.deleteMany({ where: { empresa_id: id } });
+      await tx.log_auditoria.deleteMany({ where: { empresa_id: id } });
+      await tx.ordem_servico.deleteMany({ where: { empresa_id: id } });
       await tx.afericao.deleteMany({ where: { empresa_id: id } });
       await tx.contrato.deleteMany({ where: { empresa_id: id } });
       await tx.movimentacao.deleteMany({ where: { empresa_id: id } });
