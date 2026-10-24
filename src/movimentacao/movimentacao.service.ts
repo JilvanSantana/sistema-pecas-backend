@@ -1,9 +1,13 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class MovimentacaoService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private audit: AuditService,
+  ) {}
 
   private filtroBase(papel: string, base_id: string | null) {
     if (papel === 'admin_base' || papel === 'operador') {
@@ -76,18 +80,14 @@ export class MovimentacaoService {
       where: { id: dados.peca_id, empresa_id },
     });
 
-    if (!peca) {
-      throw new BadRequestException('Peça não encontrada');
-    }
+    if (!peca) throw new BadRequestException('Peça não encontrada');
 
     let tecnico_id: string | null = null;
     if (dados.origem_tipo === 'tecnico') {
       const tecnico = await this.prisma.tecnico.findFirst({
         where: { usuario_id: dados.origem_id, empresa_id },
       });
-      if (tecnico) {
-        tecnico_id = tecnico.id;
-      }
+      if (tecnico) tecnico_id = tecnico.id;
     }
 
     const origem_id = tecnico_id || dados.origem_id;
@@ -97,7 +97,7 @@ export class MovimentacaoService {
         empresa_id,
         peca_id: dados.peca_id,
         origem_tipo: dados.origem_tipo,
-        origem_id: origem_id,
+        origem_id,
         destino_tipo: dados.destino_tipo,
         destino_id: dados.destino_id,
         motivo_envio: dados.motivo_envio,
@@ -139,6 +139,22 @@ export class MovimentacaoService {
       });
     }
 
+    // ─── AUDITORIA ───────────────────────────────────────────────────────────
+    await this.audit.registrar({
+      empresa_id,
+      entidade: 'movimentacao',
+      entidade_id: movimentacao.id,
+      acao: 'REGISTRAR_ENVIO',
+      usuario_id,
+      dados_anteriores: { status_peca: peca.status_atual, base_id: peca.base_atual_id },
+      dados_novos: {
+        origem_tipo: dados.origem_tipo,
+        destino_tipo: dados.destino_tipo,
+        motivo_envio: dados.motivo_envio,
+        status: 'enviada',
+      },
+    });
+
     return movimentacao;
   }
 
@@ -151,9 +167,7 @@ export class MovimentacaoService {
       where: { id, empresa_id },
     });
 
-    if (!movimentacao) {
-      throw new BadRequestException('Movimentação não encontrada');
-    }
+    if (!movimentacao) throw new BadRequestException('Movimentação não encontrada');
 
     const status = dados.confirmado ? 'recebida' : 'divergente';
 
@@ -168,10 +182,9 @@ export class MovimentacaoService {
     });
 
     if (dados.confirmado) {
-      let status_peca = 'em_estoque_base';
-      if (dados.condicao === 'defeituosa') {
-        status_peca = 'defeituosa_aguardando_analise';
-      }
+      const status_peca = dados.condicao === 'defeituosa'
+        ? 'defeituosa_aguardando_analise'
+        : 'em_estoque_base';
 
       await this.prisma.peca.update({
         where: { id: movimentacao.peca_id },
@@ -182,6 +195,17 @@ export class MovimentacaoService {
         },
       });
     }
+
+    // ─── AUDITORIA ───────────────────────────────────────────────────────────
+    await this.audit.registrar({
+      empresa_id,
+      entidade: 'movimentacao',
+      entidade_id: id,
+      acao: dados.confirmado ? 'CONFIRMAR_RECEBIMENTO' : 'RECEBIMENTO_DIVERGENTE',
+      usuario_id,
+      dados_anteriores: { status: movimentacao.status },
+      dados_novos: { status, condicao: dados.condicao },
+    });
 
     return { mensagem: `Movimentação marcada como ${status}` };
   }
@@ -240,6 +264,17 @@ export class MovimentacaoService {
         data: { status_atual: 'em_transito', tecnico_atual_id: null },
       });
 
+      // ─── AUDITORIA ─────────────────────────────────────────────────────────
+      await this.audit.registrar({
+        empresa_id,
+        entidade: 'movimentacao',
+        entidade_id: mov.id,
+        acao: 'REMESSA_PARA_SEDE',
+        usuario_id,
+        dados_anteriores: { status_peca: peca.status_atual },
+        dados_novos: { destino_base_id: dados.base_destino_id, status: 'enviada' },
+      });
+
       movimentacoes.push(mov);
     }
 
@@ -252,9 +287,7 @@ export class MovimentacaoService {
       include: { base: true, tecnico: { include: { usuario: true } } },
     });
 
-    if (!peca) {
-      throw new BadRequestException('Peça não encontrada');
-    }
+    if (!peca) throw new BadRequestException('Peça não encontrada');
 
     if (peca.status_atual === 'aguardando_remessa') {
       return {
@@ -314,9 +347,7 @@ export class MovimentacaoService {
       where: { id: peca_id, empresa_id, status_atual: 'aguardando_remessa' },
     });
 
-    if (!peca) {
-      throw new BadRequestException('Peça não encontrada ou não está aguardando remessa');
-    }
+    if (!peca) throw new BadRequestException('Peça não encontrada ou não está aguardando remessa');
 
     await this.prisma.peca.update({
       where: { id: peca_id },
@@ -334,9 +365,7 @@ export class MovimentacaoService {
       where: { id: peca_id, empresa_id, status_atual: 'tecnico_confirmou_entrega' },
     });
 
-    if (!peca) {
-      throw new BadRequestException('Peça não encontrada ou técnico ainda não confirmou a entrega');
-    }
+    if (!peca) throw new BadRequestException('Peça não encontrada ou técnico ainda não confirmou a entrega');
 
     const status_final = dados.tipo === 'defeituosa' ? 'defeituosa_aguardando_analise' : 'em_estoque_base';
 
@@ -361,18 +390,14 @@ export class MovimentacaoService {
       where: { id: dados.peca_id, empresa_id, status_atual: 'em_estoque_base' },
     });
 
-    if (!peca) {
-      throw new BadRequestException('Peça não encontrada ou não está em estoque');
-    }
+    if (!peca) throw new BadRequestException('Peça não encontrada ou não está em estoque');
 
     const tecnico = await this.prisma.tecnico.findFirst({
       where: { usuario_id: dados.tecnico_usuario_id, empresa_id },
       include: { usuario: true },
     });
 
-    if (!tecnico) {
-      throw new BadRequestException('Técnico não encontrado');
-    }
+    if (!tecnico) throw new BadRequestException('Técnico não encontrado');
 
     await this.prisma.peca.update({
       where: { id: dados.peca_id },
@@ -383,7 +408,7 @@ export class MovimentacaoService {
       },
     });
 
-    await this.prisma.movimentacao.create({
+    const mov = await this.prisma.movimentacao.create({
       data: {
         empresa_id,
         peca_id: dados.peca_id,
@@ -398,6 +423,17 @@ export class MovimentacaoService {
       },
     });
 
+    // ─── AUDITORIA ───────────────────────────────────────────────────────────
+    await this.audit.registrar({
+      empresa_id,
+      entidade: 'movimentacao',
+      entidade_id: mov.id,
+      acao: 'SAIDA_PARA_TECNICO',
+      usuario_id,
+      dados_anteriores: { status_peca: peca.status_atual, base_id: peca.base_atual_id },
+      dados_novos: { tecnico_id: tecnico.id, tecnico_nome: tecnico.usuario.nome, status: 'saiu_para_campo' },
+    });
+
     return {
       mensagem: `Peça registrada como saída para o técnico ${tecnico.usuario.nome}. Aguardando confirmação do técnico.`,
       tecnico_nome: tecnico.usuario.nome,
@@ -409,9 +445,7 @@ export class MovimentacaoService {
       where: { id: peca_id, empresa_id, status_atual: 'saiu_para_campo' },
     });
 
-    if (!peca) {
-      throw new BadRequestException('Peça não encontrada ou não está aguardando confirmação');
-    }
+    if (!peca) throw new BadRequestException('Peça não encontrada ou não está aguardando confirmação');
 
     const tecnico = await this.prisma.tecnico.findFirst({
       where: { usuario_id, empresa_id },
@@ -440,6 +474,17 @@ export class MovimentacaoService {
           usuario_confirmou_id: usuario_id,
         },
       });
+
+      // ─── AUDITORIA ─────────────────────────────────────────────────────────
+      await this.audit.registrar({
+        empresa_id,
+        entidade: 'movimentacao',
+        entidade_id: mov.id,
+        acao: 'TECNICO_CONFIRMOU_RECEBIMENTO',
+        usuario_id,
+        dados_anteriores: { status_peca: 'saiu_para_campo' },
+        dados_novos: { status_peca: 'em_posse_tecnico', tecnico_id: tecnico.id },
+      });
     }
 
     return { mensagem: 'Recebimento confirmado. Peça agora está em sua posse.' };
@@ -461,8 +506,8 @@ export class MovimentacaoService {
       orderBy: { criado_em: 'desc' },
     });
   }
-  
-    async registrarSaidaDaSedeParaBase(empresa_id: string, usuario_id: string, dados: {
+
+  async registrarSaidaDaSedeParaBase(empresa_id: string, usuario_id: string, dados: {
     peca_id: string;
     base_destino_id: string;
     codigo_rastreio?: string;
@@ -473,11 +518,9 @@ export class MovimentacaoService {
       where: { id: dados.peca_id, empresa_id, status_atual: 'em_estoque_base' },
     });
 
-    if (!peca) {
-      throw new BadRequestException('Peça não encontrada ou não está em estoque');
-    }
+    if (!peca) throw new BadRequestException('Peça não encontrada ou não está em estoque');
 
-    await this.prisma.movimentacao.create({
+    const mov = await this.prisma.movimentacao.create({
       data: {
         empresa_id,
         peca_id: dados.peca_id,
@@ -497,6 +540,17 @@ export class MovimentacaoService {
     await this.prisma.peca.update({
       where: { id: dados.peca_id },
       data: { status_atual: 'em_transito', base_atual_id: null },
+    });
+
+    // ─── AUDITORIA ───────────────────────────────────────────────────────────
+    await this.audit.registrar({
+      empresa_id,
+      entidade: 'movimentacao',
+      entidade_id: mov.id,
+      acao: 'SAIDA_SEDE_PARA_BASE',
+      usuario_id,
+      dados_anteriores: { status_peca: peca.status_atual, base_id: peca.base_atual_id },
+      dados_novos: { base_destino_id: dados.base_destino_id, status: 'em_transito' },
     });
 
     return { mensagem: 'Peça registrada como enviada para a base. Aguardando confirmação de recebimento.' };
