@@ -9,21 +9,18 @@ import { Roles } from '../auth/roles.decorator';
 export class EmpresaController {
   constructor(private empresaService: EmpresaService) {}
 
-  // ─── SUPER ADMIN: listar todas as empresas ────────────────────────────────
   @Roles('super_admin')
   @Get()
   listarEmpresas() {
     return this.empresaService.listarEmpresas();
   }
 
-  // ─── SUPER ADMIN: buscar empresa por id ──────────────────────────────────
   @Roles('super_admin')
   @Get(':id')
   buscarEmpresa(@Param('id') id: string) {
     return this.empresaService.buscarEmpresa(id);
   }
 
-  // ─── SUPER ADMIN: criar empresa simples ──────────────────────────────────
   @Roles('super_admin')
   @Post()
   criarEmpresa(
@@ -36,7 +33,6 @@ export class EmpresaController {
     return this.empresaService.criarEmpresa(body);
   }
 
-  // ─── SUPER ADMIN: onboarding completo (empresa + admin + sede) ───────────
   @Roles('super_admin')
   @Post('onboarding')
   criarEmpresaComAdmin(
@@ -55,7 +51,6 @@ export class EmpresaController {
     return this.empresaService.criarEmpresaComAdmin(body);
   }
 
-  // ─── SUPER ADMIN: bloquear / desbloquear empresa ─────────────────────────
   @Roles('super_admin')
   @Patch(':id/bloquear')
   bloquearEmpresa(@Param('id') id: string) {
@@ -68,22 +63,20 @@ export class EmpresaController {
     return this.empresaService.desbloquearEmpresa(id);
   }
 
-  // ─── SUPER ADMIN: excluir empresa ────────────────────────────────────────
   @Roles('super_admin')
   @Delete(':id')
   deletarEmpresa(@Param('id') id: string) {
     return this.empresaService.deletarEmpresa(id);
   }
 
-  // ─── SUPER ADMIN: listar bases de uma empresa ────────────────────────────
   @Roles('super_admin')
   @Get(':id/bases')
   listarBases(@Param('id') id: string) {
     return this.empresaService.listarBases(id);
   }
 
-  // ─── SUPER ADMIN: criar base em uma empresa ──────────────────────────────
-  @Roles('super_admin')
+  // ✅ CORRIGIDO: admin_global pode criar base na própria empresa
+  @Roles('super_admin', 'admin_global')
   @Post(':id/bases')
   criarBase(
     @Param('id') empresa_id: string,
@@ -98,21 +91,18 @@ export class EmpresaController {
     return this.empresaService.criarBase({ ...body, empresa_id });
   }
 
-  // ─── ADMIN GLOBAL: listar usuários da própria empresa ────────────────────
   @Roles('super_admin', 'admin_global')
   @Get('usuarios')
   listarUsuariosDaEmpresa(@Request() req) {
     return this.empresaService.listarUsuarios(req.user.empresa_id);
   }
 
-  // ─── SUPER ADMIN: listar usuários de qualquer empresa ────────────────────
   @Roles('super_admin')
   @Get(':id/usuarios')
   listarUsuarios(@Param('id') id: string) {
     return this.empresaService.listarUsuarios(id);
   }
 
-  // ─── ADMIN GLOBAL: criar usuário na própria empresa ──────────────────────
   @Roles('super_admin', 'admin_global')
   @Post('usuarios')
   criarUsuario(
@@ -122,7 +112,6 @@ export class EmpresaController {
     return this.empresaService.criarUsuario(req.user.empresa_id, body);
   }
 
-  // ─── ADMIN GLOBAL: bloquear / desbloquear / deletar usuário ──────────────
   @Roles('super_admin', 'admin_global')
   @Patch('usuarios/:id/bloquear')
   bloquearUsuario(@Param('id') id: string, @Request() req) {
