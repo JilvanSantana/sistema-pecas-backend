@@ -69,13 +69,12 @@ export class EmpresaController {
     return this.empresaService.deletarEmpresa(id);
   }
 
-  @Roles('super_admin')
+  @Roles('super_admin', 'admin_global')
   @Get(':id/bases')
   listarBases(@Param('id') id: string) {
     return this.empresaService.listarBases(id);
   }
 
-  // ✅ CORRIGIDO: admin_global pode criar base na própria empresa
   @Roles('super_admin', 'admin_global')
   @Post(':id/bases')
   criarBase(
