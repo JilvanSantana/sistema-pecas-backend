@@ -15,22 +15,38 @@ export class EmpresaController {
     return this.empresaService.listarEmpresas();
   }
 
-  @Roles('super_admin')
-  @Get(':id')
-  buscarEmpresa(@Param('id') id: string) {
-    return this.empresaService.buscarEmpresa(id);
+  // ✅ Rotas fixas ANTES das rotas com :id
+  @Roles('super_admin', 'admin_global')
+  @Get('usuarios')
+  listarUsuariosDaEmpresa(@Request() req) {
+    return this.empresaService.listarUsuarios(req.user.empresa_id);
   }
 
-  @Roles('super_admin')
-  @Post()
-  criarEmpresa(
-    @Body() body: {
-      razao_social: string;
-      cnpj: string;
-      plano_id?: string;
-    },
+  @Roles('super_admin', 'admin_global')
+  @Post('usuarios')
+  criarUsuario(
+    @Body() body: { nome: string; email: string; senha: string; papel: string; base_id?: string },
+    @Request() req,
   ) {
-    return this.empresaService.criarEmpresa(body);
+    return this.empresaService.criarUsuario(req.user.empresa_id, body);
+  }
+
+  @Roles('super_admin', 'admin_global')
+  @Patch('usuarios/:id/bloquear')
+  bloquearUsuario(@Param('id') id: string, @Request() req) {
+    return this.empresaService.bloquearUsuario(id, req.user.empresa_id);
+  }
+
+  @Roles('super_admin', 'admin_global')
+  @Patch('usuarios/:id/desbloquear')
+  desbloquearUsuario(@Param('id') id: string, @Request() req) {
+    return this.empresaService.desbloquearUsuario(id, req.user.empresa_id);
+  }
+
+  @Roles('super_admin', 'admin_global')
+  @Delete('usuarios/:id')
+  deletarUsuario(@Param('id') id: string, @Request() req) {
+    return this.empresaService.deletarUsuario(id, req.user.empresa_id);
   }
 
   @Roles('super_admin')
@@ -49,6 +65,24 @@ export class EmpresaController {
     },
   ) {
     return this.empresaService.criarEmpresaComAdmin(body);
+  }
+
+  @Roles('super_admin')
+  @Post()
+  criarEmpresa(
+    @Body() body: {
+      razao_social: string;
+      cnpj: string;
+      plano_id?: string;
+    },
+  ) {
+    return this.empresaService.criarEmpresa(body);
+  }
+
+  @Roles('super_admin')
+  @Get(':id')
+  buscarEmpresa(@Param('id') id: string) {
+    return this.empresaService.buscarEmpresa(id);
   }
 
   @Roles('super_admin')
@@ -90,42 +124,9 @@ export class EmpresaController {
     return this.empresaService.criarBase({ ...body, empresa_id });
   }
 
-  @Roles('super_admin', 'admin_global')
-  @Get('usuarios')
-  listarUsuariosDaEmpresa(@Request() req) {
-    return this.empresaService.listarUsuarios(req.user.empresa_id);
-  }
-
   @Roles('super_admin')
   @Get(':id/usuarios')
   listarUsuarios(@Param('id') id: string) {
     return this.empresaService.listarUsuarios(id);
-  }
-
-  @Roles('super_admin', 'admin_global')
-  @Post('usuarios')
-  criarUsuario(
-    @Body() body: { nome: string; email: string; senha: string; papel: string; base_id?: string },
-    @Request() req,
-  ) {
-    return this.empresaService.criarUsuario(req.user.empresa_id, body);
-  }
-
-  @Roles('super_admin', 'admin_global')
-  @Patch('usuarios/:id/bloquear')
-  bloquearUsuario(@Param('id') id: string, @Request() req) {
-    return this.empresaService.bloquearUsuario(id, req.user.empresa_id);
-  }
-
-  @Roles('super_admin', 'admin_global')
-  @Patch('usuarios/:id/desbloquear')
-  desbloquearUsuario(@Param('id') id: string, @Request() req) {
-    return this.empresaService.desbloquearUsuario(id, req.user.empresa_id);
-  }
-
-  @Roles('super_admin', 'admin_global')
-  @Delete('usuarios/:id')
-  deletarUsuario(@Param('id') id: string, @Request() req) {
-    return this.empresaService.deletarUsuario(id, req.user.empresa_id);
   }
 }
