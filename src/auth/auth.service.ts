@@ -22,7 +22,7 @@ export class AuthService {
       throw new UnauthorizedException('Email ou senha inválidos');
     }
 
-    if (usuario.empresa.status_assinatura === 'bloqueada') {
+    if (usuario.papel !== 'super_admin' && usuario.empresa.status_assinatura === 'bloqueada') {
       throw new UnauthorizedException('Empresa bloqueada. Entre em contato com o suporte.');
     }
 
