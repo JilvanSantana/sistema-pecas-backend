@@ -46,11 +46,12 @@ export class AuditService {
     });
   }
 
-  async buscarTodos(filtros?: { entidade?: string; acao?: string; limite?: number }) {
+  async buscarTodos(filtros?: { entidade?: string; acao?: string; empresa_id?: string; limite?: number }) {
     return this.prisma.log_auditoria.findMany({
       where: {
         ...(filtros?.entidade && { entidade: filtros.entidade }),
         ...(filtros?.acao && { acao: filtros.acao }),
+        ...(filtros?.empresa_id && { empresa_id: filtros.empresa_id }),
       },
       include: {
         usuario: {

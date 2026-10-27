@@ -31,12 +31,13 @@ export class AuditController {
   listarLogsTodasEmpresas(
     @Query('entidade') entidade?: string,
     @Query('acao') acao?: string,
+    @Query('empresa_id') empresa_id?: string,
     @Query('limite') limite?: string,
   ) {
-    // super_admin vê logs de todas as empresas (empresa_id vazio = sem filtro)
     return this.auditService.buscarTodos({
       entidade,
       acao,
+      empresa_id,
       limite: limite ? parseInt(limite) : 200,
     });
   }
