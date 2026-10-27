@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -8,6 +9,7 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private auditService: AuditService,
   ) {}
 
   async login(email: string, senha: string) {
@@ -37,8 +39,25 @@ export class AuthService {
       base_id: usuario.base_id,
     };
 
+    const token = this.jwtService.sign(payload);
+
+    // Registra log de acesso
+    await this.auditService.registrar({
+      empresa_id: usuario.empresa_id,
+      entidade: 'login',
+      entidade_id: usuario.id,
+      acao: 'LOGIN',
+      usuario_id: usuario.id,
+      dados_novos: {
+        email: usuario.email,
+        papel: usuario.papel,
+        base_id: usuario.base_id,
+        timestamp: new Date().toISOString(),
+      },
+    });
+
     return {
-      access_token: this.jwtService.sign(payload),
+      access_token: token,
       usuario: {
         id: usuario.id,
         nome: usuario.nome,

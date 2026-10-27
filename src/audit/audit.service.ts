@@ -46,6 +46,22 @@ export class AuditService {
     });
   }
 
+  async buscarTodos(filtros?: { entidade?: string; acao?: string; limite?: number }) {
+    return this.prisma.log_auditoria.findMany({
+      where: {
+        ...(filtros?.entidade && { entidade: filtros.entidade }),
+        ...(filtros?.acao && { acao: filtros.acao }),
+      },
+      include: {
+        usuario: {
+          select: { id: true, nome: true, email: true, papel: true },
+        },
+      },
+      orderBy: { timestamp: 'desc' },
+      take: filtros?.limite ?? 200,
+    });
+  }
+
   async buscarPorEmpresa(
     empresa_id: string,
     filtros?: { entidade?: string; acao?: string; usuario_id?: string; limite?: number },
