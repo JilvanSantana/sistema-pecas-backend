@@ -16,13 +16,13 @@ export class EmpresaController {
   }
 
   // ✅ Rotas fixas ANTES das rotas com :id
-  @Roles('super_admin', 'admin_global')
+  @Roles('super_admin', 'admin_global', 'admin_base')
   @Get('usuarios')
   listarUsuariosDaEmpresa(@Request() req) {
     return this.empresaService.listarUsuarios(req.user.empresa_id);
   }
 
-  @Roles('super_admin', 'admin_global')
+  @Roles('super_admin', 'admin_global', 'admin_base')
   @Post('usuarios')
   criarUsuario(
     @Body() body: { nome: string; email: string; senha: string; papel: string; base_id?: string },
@@ -31,19 +31,19 @@ export class EmpresaController {
     return this.empresaService.criarUsuario(req.user.empresa_id, body);
   }
 
-  @Roles('super_admin', 'admin_global')
+  @Roles('super_admin', 'admin_global', 'admin_base')
   @Patch('usuarios/:id/bloquear')
   bloquearUsuario(@Param('id') id: string, @Request() req) {
     return this.empresaService.bloquearUsuario(id, req.user.empresa_id);
   }
 
-  @Roles('super_admin', 'admin_global')
+  @Roles('super_admin', 'admin_global', 'admin_base')
   @Patch('usuarios/:id/desbloquear')
   desbloquearUsuario(@Param('id') id: string, @Request() req) {
     return this.empresaService.desbloquearUsuario(id, req.user.empresa_id);
   }
 
-  @Roles('super_admin', 'admin_global')
+  @Roles('super_admin', 'admin_global', 'admin_base')
   @Delete('usuarios/:id')
   deletarUsuario(@Param('id') id: string, @Request() req) {
     return this.empresaService.deletarUsuario(id, req.user.empresa_id);
