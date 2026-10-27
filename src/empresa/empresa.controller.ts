@@ -98,12 +98,24 @@ export class EmpresaController {
   }
 
   @Roles('super_admin')
+  @Patch(':id/ativar')
+  ativarEmpresa(@Param('id') id: string) {
+    return this.empresaService.ativarEmpresa(id);
+  }
+
+  @Roles('super_admin')
+  @Patch(':id/inativar')
+  inativarEmpresa(@Param('id') id: string) {
+    return this.empresaService.inativarEmpresa(id);
+  }
+
+  @Roles('super_admin')
   @Delete(':id')
   deletarEmpresa(@Param('id') id: string) {
     return this.empresaService.deletarEmpresa(id);
   }
 
-  @Roles('super_admin', 'admin_global', 'admin_base', 'operador')
+  @Roles('super_admin', 'admin_global')
   @Get(':id/bases')
   listarBases(@Param('id') id: string) {
     return this.empresaService.listarBases(id);

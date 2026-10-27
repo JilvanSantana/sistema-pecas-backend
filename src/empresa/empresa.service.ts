@@ -103,9 +103,25 @@ export class EmpresaService {
   async desbloquearEmpresa(id: string) {
     await this.prisma.empresa.update({
       where: { id },
-      data: { status_assinatura: 'ativo' },
+      data: { status_assinatura: 'ativa' },
     });
     return { mensagem: 'Empresa desbloqueada.' };
+  }
+
+  async ativarEmpresa(id: string) {
+    await this.prisma.empresa.update({
+      where: { id },
+      data: { status_assinatura: 'ativa' },
+    });
+    return { mensagem: 'Empresa ativada.' };
+  }
+
+  async inativarEmpresa(id: string) {
+    await this.prisma.empresa.update({
+      where: { id },
+      data: { status_assinatura: 'inativa' },
+    });
+    return { mensagem: 'Empresa inativada.' };
   }
 
   async deletarEmpresa(id: string) {
