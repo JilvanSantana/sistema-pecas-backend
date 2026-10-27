@@ -103,7 +103,7 @@ export class EmpresaController {
     return this.empresaService.deletarEmpresa(id);
   }
 
-  @Roles('super_admin', 'admin_global', 'operador')
+  @Roles('super_admin', 'admin_global', 'admin_base', 'operador')
   @Get(':id/bases')
   listarBases(@Param('id') id: string) {
     return this.empresaService.listarBases(id);
